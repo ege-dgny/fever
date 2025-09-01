@@ -1,3 +1,20 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@layer components {
+  .animate-swap {
+    animation: swap-glow 1.5s ease-in-out;
+  }
+
+  @keyframes swap-glow {
+    0%, 100% {
+      box-shadow: 0 0 0px #fef08a;
+      transform: scale(1.05);
+    }
+    50% {
+      box-shadow: 0 0 20px 5px #fef08a;
+      transform: scale(1.15);
+    }
+  }
+}

@@ -34,6 +34,7 @@ const GameBoard: React.FC<GameBoardProps> = ({ gameState }) => {
   const [peekTimeRemaining, setPeekTimeRemaining] = useState(60);
   const [showHelp, setShowHelp] = useState(false);
   const [abilityTarget, setAbilityTarget] = useState<AbilityTarget>({});
+  const [swappingPositions, setSwappingPositions] = useState<string[]>([]);
   
   const { 
     currentUser, 
@@ -201,12 +202,23 @@ const GameBoard: React.FC<GameBoardProps> = ({ gameState }) => {
           toast.error("Select an opponent's card.");
           return;
         }
+        
+        // Trigger animation
+        const ownPosString = `${currentUser.id}-${abilityTarget.ownCardPosition.row}-${abilityTarget.ownCardPosition.col}`;
+        const opponentPosString = `${player.id}-${position.row}-${position.col}`;
+        setSwappingPositions([ownPosString, opponentPosString]);
+
         GameService.executeAbility(gameState.id, ability, currentUser.id, {
           ...abilityTarget,
           opponentPlayerId: player.id,
           opponentCardPosition: position,
         });
-        setAbilityTarget({});
+
+        // Reset state after animation
+        setTimeout(() => {
+          setAbilityTarget({});
+          setSwappingPositions([]);
+        }, 1500);
       }
     }
   };
@@ -281,9 +293,11 @@ const GameBoard: React.FC<GameBoardProps> = ({ gameState }) => {
             <div key={`row-${rowIndex}`} className="flex gap-2 justify-center">
               {row.map((card, colIndex) => {
                 const posKey = `${rowIndex}-${colIndex}`;
-                const canPeek = (isCurrentPlayer && peekingPositions.has(posKey)) || (showHelp && card?.isFaceUp === false);
-                const showPeek = canPeek && isPeeking;
+                const playerPosKey = `${player.id}-${rowIndex}-${colIndex}`;
+                const canPeek = isCurrentPlayer && peekingPositions.has(posKey);
+                const showPeek = canPeek; // Simplified for clarity
                 const isRecallable = isCurrentPlayer && isPositionRecallable(rowIndex, colIndex);
+                const isSwapping = swappingPositions.includes(playerPosKey);
                 
                 return (
                   <CardComponent
@@ -293,6 +307,7 @@ const GameBoard: React.FC<GameBoardProps> = ({ gameState }) => {
                     isSelected={isCurrentPlayer && (selectedCard?.row === rowIndex && selectedCard?.col === colIndex || abilityTarget.ownCardPosition?.row === rowIndex && abilityTarget.ownCardPosition?.col === colIndex)}
                     isPeekable={canPeek}
                     canRecall={isRecallable}
+                    isSwapping={isSwapping}
                     showPeek={showPeek}
                     onClick={() => {
                       if (gameState.status === 'awaiting-ability-target') {

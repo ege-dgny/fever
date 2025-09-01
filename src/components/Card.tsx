@@ -8,6 +8,7 @@ interface CardProps {
   isSelected?: boolean;
   isPeekable?: boolean;
   canRecall?: boolean;
+  isSwapping?: boolean;
   onClick?: () => void;
   showPeek?: boolean;
 }
@@ -17,6 +18,7 @@ const CardComponent: React.FC<CardProps> = ({
   isSelected = false, 
   isPeekable = false,
   canRecall = false,
+  isSwapping = false,
   onClick,
   showPeek = false
 }) => {
@@ -61,6 +63,7 @@ const CardComponent: React.FC<CardProps> = ({
         relative w-20 h-28 rounded-lg shadow-lg cursor-pointer transform transition-all duration-200
         ${isSelected ? 'scale-110 ring-4 ring-yellow-400' : 'hover:scale-105'}
         ${canRecall ? 'ring-2 ring-green-400 animate-pulse' : ''}
+        ${isSwapping ? 'animate-swap' : ''}
         ${card.isFaceUp ? 'bg-white' : 'bg-gradient-to-br from-blue-600 to-purple-600'}
       `}
     >
