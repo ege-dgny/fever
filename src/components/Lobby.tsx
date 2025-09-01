@@ -163,7 +163,7 @@ const Lobby: React.FC = () => {
                   <div key={playerId} className="flex items-center justify-between py-2">
                     <span className="text-white">
                       {player?.name || `Player ${currentRoom.playerIds.indexOf(playerId) + 1}`} 
-                      {playerId === currentRoom.hostId && ' 👑'}
+                      {playerId === currentRoom.hostId && ' (Host)'}
                       {playerId === currentUser?.id && ' (You)'}
                     </span>
                   </div>
@@ -189,7 +189,7 @@ const Lobby: React.FC = () => {
     <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900 flex items-center justify-center p-4">
       <div className="bg-white/10 backdrop-blur-lg rounded-3xl shadow-2xl p-8 w-full max-w-4xl">
         <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold text-white mb-2">Fever Card Game</h1>
+          <h1 className="text-4xl font-bold text-white mb-2">Fever</h1>
           <p className="text-white/70">Welcome, {currentUser?.name}!</p>
         </div>
         

@@ -1,8 +1,8 @@
-# 🚀 Deployment Guide - Fever Card Game
+# Deployment Guide - Fever
 
 ## Deployment Options
 
-### Option 1: Vercel (Recommended) ✨
+### Option 1: Vercel (Recommended)
 
 **Why Vercel?**
 - Free tier perfect for friend groups
@@ -38,7 +38,7 @@ git push -u origin main
      ```
    - Click "Deploy"
 
-3. **Your game is live!** 🎉
+3. **Your game is live!**
    - URL: `https://your-project.vercel.app`
    - Share links: `https://your-project.vercel.app/join/ROOMCODE`
 
@@ -177,4 +177,4 @@ Remember to add these to your deployment platform's environment variables!
 
 ---
 
-**That's it!** Your game is ready to share with friends. They just click the link and play! 🎉
+**That's it!** Your game is ready to share with friends. They just click the link and play!

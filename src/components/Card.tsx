@@ -32,12 +32,12 @@ const CardComponent: React.FC<CardProps> = ({
   };
   
   const getSuitSymbol = (suit: Suit | null): string => {
-    if (!suit) return '🃏'; // Joker
+    if (!suit) return ''; // Joker has no suit symbol
     const symbols: Record<Suit, string> = {
-      hearts: '♥',
-      diamonds: '♦',
-      clubs: '♣',
-      spades: '♠'
+      hearts: 'H',
+      diamonds: 'D',
+      clubs: 'C',
+      spades: 'S'
     };
     return symbols[suit];
   };
@@ -67,18 +67,18 @@ const CardComponent: React.FC<CardProps> = ({
       {card.isFaceUp ? (
         <div className="h-full flex flex-col items-center justify-center p-2">
           <div className={`text-2xl font-bold ${getSuitColor(card.suit)}`}>
-            {card.rank}
+            {card.rank === 'joker' ? 'Joker' : card.rank}
           </div>
           <div className={`text-3xl ${getSuitColor(card.suit)}`}>
             {getSuitSymbol(card.suit)}
           </div>
-          {card.specialAbility && (
+          {hasAbility && (
             <Zap className="w-4 h-4 text-yellow-500 absolute top-1 right-1" />
           )}
         </div>
       ) : (
         <div className="h-full flex items-center justify-center">
-          <div className="text-white text-4xl opacity-20">🎴</div>
+          <div className="text-white text-4xl opacity-20">F</div>
         </div>
       )}
       
@@ -92,7 +92,7 @@ const CardComponent: React.FC<CardProps> = ({
         <div className="absolute inset-0 bg-black/80 rounded-lg flex flex-col items-center justify-center text-white p-2">
           <div className="text-xs mb-1">Peeking</div>
           <div className={`text-lg font-bold ${getSuitColor(card.suit)}`}>
-            {card.rank}{getSuitSymbol(card.suit)}
+            {card.rank === 'joker' ? 'Joker' : card.rank}{getSuitSymbol(card.suit)}
           </div>
           <div className="text-xs mt-1">Value: {card.value}</div>
         </div>

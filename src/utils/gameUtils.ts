@@ -139,19 +139,19 @@ export function calculatePlayerScore(cards: (Card | null)[][]): number {
 }
 
 export function getCardDisplay(card: Card | null): string {
-  if (!card) return '🔲';
-  if (!card.isFaceUp) return '🎴';
+  if (!card) return 'Empty';
+  if (!card.isFaceUp) return 'Card';
   
-  if (card.rank === 'joker') return '🃏';
+  if (card.rank === 'joker') return 'Joker';
   
-  const suitEmojis: Record<Suit, string> = {
-    hearts: '♥️',
-    diamonds: '♦️',
-    clubs: '♣️',
-    spades: '♠️'
+  const suitSymbols: Record<Suit, string> = {
+    hearts: 'H',
+    diamonds: 'D',
+    clubs: 'C',
+    spades: 'S'
   };
   
-  return `${card.rank}${card.suit ? suitEmojis[card.suit] : ''}`;
+  return `${card.rank}${card.suit ? suitSymbols[card.suit] : ''}`;
 }
 
 export function canRecallCard(

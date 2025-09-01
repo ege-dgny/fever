@@ -193,7 +193,7 @@ const GameBoard: React.FC<GameBoardProps> = ({ gameState }) => {
         <div className="flex justify-between items-center mb-3">
           <div>
             <h3 className="text-white font-semibold">
-              {player.name} {player.isHost && '👑'} {isCurrentPlayer && '(You)'}
+              {player.name} {player.isHost && '(Host)'} {isCurrentPlayer && '(You)'}
             </h3>
             {gameState.status === 'finished' && (
               <p className="text-white/70 text-sm">Score: {player.score}</p>
@@ -260,7 +260,7 @@ const GameBoard: React.FC<GameBoardProps> = ({ gameState }) => {
                 .map((player, index) => (
                   <div key={player.id} className="bg-white/10 rounded-lg p-4 flex justify-between items-center">
                     <div className="flex items-center gap-3">
-                      <span className="text-2xl">{index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : '👤'}</span>
+                      <span className="text-2xl font-bold w-8 text-center">{index + 1}.</span>
                       <span className="text-white font-semibold">{player.name}</span>
                     </div>
                     <span className="text-white text-xl">{player.score} points</span>

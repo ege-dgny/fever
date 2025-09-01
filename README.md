@@ -1,4 +1,4 @@
-# Fever Card Game 🎴
+# Fever
 
 A multiplayer card game built with React, TypeScript, Firebase, and Tailwind CSS.
 
