@@ -11,10 +11,11 @@ import {
   serverTimestamp,
   arrayUnion,
   arrayRemove,
-  deleteDoc
+  deleteDoc,
+  runTransaction
 } from 'firebase/firestore';
 import { db } from '../config/firebase';
-import type { GameState, GameRoom, Player, GameMode, Card } from '../types/game';
+import type { GameState, GameRoom, Player, GameMode, Card, SpecialAbility } from '../types/game';
 import { createDeck, dealCards, generateRoomCode, calculatePlayerScore } from '../utils/gameUtils';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -343,13 +344,29 @@ export class GameService {
     const discardedCard = { ...cardToDiscard, isFaceUp: true };
     game.discardPile.unshift(discardedCard);
     
-    // Move to next player
-    const nextPlayerIndex = (game.currentPlayerIndex + 1) % game.players.length;
-    game.currentPlayerIndex = nextPlayerIndex;
+    // Check for special ability and update game state accordingly
+    const ability = discardedCard.specialAbility;
+    if (ability) {
+      if (ability === 'double-turn') {
+        // Jack: Don't advance turn, player goes again.
+        // We simply don't advance the nextPlayerIndex.
+      } else {
+        // 7, Q, K: Await player action for ability
+        game.status = 'awaiting-ability-target';
+        game.activeAbility = {
+          playerId: playerId,
+          ability: ability,
+          cardId: discardedCard.id,
+        };
+      }
+    } else {
+      // No ability, advance turn as normal
+      game.currentPlayerIndex = (game.currentPlayerIndex + 1) % game.players.length;
+    }
     
     // Update current turn flags
     game.players.forEach((p, i) => {
-      p.isCurrentTurn = i === nextPlayerIndex;
+      p.isCurrentTurn = i === game.currentPlayerIndex;
     });
     
     // Convert players array to Firestore-compatible format
@@ -365,7 +382,9 @@ export class GameService {
     await updateDoc(gameRef, cleanForFirestore({
       players: firestorePlayers,
       discardPile: game.discardPile,
-      currentPlayerIndex: nextPlayerIndex,
+      currentPlayerIndex: game.currentPlayerIndex,
+      status: game.status,
+      activeAbility: game.activeAbility || null,
       lastAction: {
         type: 'discard',
         playerId,
@@ -407,15 +426,33 @@ export class GameService {
     if (replacedCard) {
       const discardedCard = { ...replacedCard, isFaceUp: true };
       game.discardPile.unshift(discardedCard);
+
+      // Check for special ability and update game state accordingly
+      const ability = discardedCard.specialAbility;
+      if (ability) {
+        if (ability === 'double-turn') {
+          // Jack: Don't advance turn, player goes again.
+        } else {
+          // 7, Q, K: Await player action for ability
+          game.status = 'awaiting-ability-target';
+          game.activeAbility = {
+            playerId: playerId,
+            ability: ability,
+            cardId: discardedCard.id,
+          };
+        }
+      } else {
+        // No ability, advance turn as normal
+        game.currentPlayerIndex = (game.currentPlayerIndex + 1) % game.players.length;
+      }
+    } else {
+      // No card was replaced (shouldn't happen in this function), advance turn
+      game.currentPlayerIndex = (game.currentPlayerIndex + 1) % game.players.length;
     }
-    
-    // Move to next player
-    const nextPlayerIndex = (game.currentPlayerIndex + 1) % game.players.length;
-    game.currentPlayerIndex = nextPlayerIndex;
     
     // Update current turn flags
     game.players.forEach((p, i) => {
-      p.isCurrentTurn = i === nextPlayerIndex;
+      p.isCurrentTurn = i === game.currentPlayerIndex;
     });
     
     // Convert players array to Firestore-compatible format
@@ -431,7 +468,9 @@ export class GameService {
     await updateDoc(gameRef, cleanForFirestore({
       players: firestorePlayers,
       discardPile: game.discardPile,
-      currentPlayerIndex: nextPlayerIndex,
+      currentPlayerIndex: game.currentPlayerIndex,
+      status: game.status,
+      activeAbility: game.activeAbility || null,
       lastAction: {
         type: 'discard',
         playerId,
@@ -443,6 +482,93 @@ export class GameService {
     }));
   }
   
+  static async executeAbility(
+    gameId: string,
+    ability: SpecialAbility,
+    actingPlayerId: string,
+    targets: {
+      ownCardPosition?: { row: number; col: number };
+      opponentPlayerId?: string;
+      opponentCardPosition?: { row: number; col: number };
+    }
+  ): Promise<void> {
+    const gameRef = doc(db, 'games', gameId);
+    
+    try {
+      await runTransaction(db, async (transaction) => {
+        const gameDoc = await transaction.get(gameRef);
+        if (!gameDoc.exists()) {
+          throw new Error("Game not found!");
+        }
+        
+        const game = gameDoc.data() as GameState;
+        
+        // --- Apply Ability Logic ---
+        if (ability === 'flip-opponent' && targets.opponentPlayerId && targets.opponentCardPosition) {
+          const opponentIndex = game.players.findIndex(p => p.id === targets.opponentPlayerId);
+          if (opponentIndex !== -1) {
+            const card = game.players[opponentIndex].cards[targets.opponentCardPosition.row][targets.opponentCardPosition.col];
+            if (card) {
+              card.isFaceUp = true;
+            }
+          }
+        }
+        
+        if (ability === 'swap' && targets.ownCardPosition && targets.opponentPlayerId && targets.opponentCardPosition) {
+          const playerIndex = game.players.findIndex(p => p.id === actingPlayerId);
+          const opponentIndex = game.players.findIndex(p => p.id === targets.opponentPlayerId);
+          
+          if (playerIndex !== -1 && opponentIndex !== -1) {
+            const ownCard = game.players[playerIndex].cards[targets.ownCardPosition.row][targets.ownCardPosition.col];
+            const opponentCard = game.players[opponentIndex].cards[targets.opponentCardPosition.row][targets.opponentCardPosition.col];
+            
+            // Perform the swap
+            game.players[playerIndex].cards[targets.ownCardPosition.row][targets.ownCardPosition.col] = opponentCard;
+            game.players[opponentIndex].cards[targets.opponentCardPosition.row][targets.opponentCardPosition.col] = ownCard;
+          }
+        }
+
+        // King's peek is client-side, this call just advances the turn.
+        
+        // --- Reset State and Advance Turn ---
+        game.status = 'playing';
+        game.activeAbility = null;
+        game.currentPlayerIndex = (game.currentPlayerIndex + 1) % game.players.length;
+        
+        // Update current turn flags
+        game.players.forEach((p, i) => {
+          p.isCurrentTurn = i === game.currentPlayerIndex;
+        });
+        
+        // Convert players array to Firestore-compatible format before updating
+        const firestorePlayers = game.players.map(player => ({
+          ...player,
+          cards: player.cards.flat().map((card, index) => ({
+            card: card,
+            row: Math.floor(index / 3),
+            col: index % 3
+          }))
+        }));
+        
+        transaction.update(gameRef, cleanForFirestore({
+          players: firestorePlayers,
+          status: game.status,
+          activeAbility: game.activeAbility,
+          currentPlayerIndex: game.currentPlayerIndex,
+          lastAction: {
+            type: 'use-ability',
+            playerId: actingPlayerId,
+            timestamp: serverTimestamp()
+          },
+          updatedAt: serverTimestamp()
+        }));
+      });
+    } catch (e) {
+      console.error("Ability execution failed: ", e);
+      throw e;
+    }
+  }
+
   static async pickFromDiscard(gameId: string, _playerId: string): Promise<Card | null> {
     const gameRef = doc(db, GAMES_COLLECTION, gameId);
     const gameDoc = await getDoc(gameRef);

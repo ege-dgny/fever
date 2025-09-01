@@ -15,9 +15,16 @@ import {
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { canRecallCard } from '../utils/gameUtils';
+import { SpecialAbility } from '../types/game';
 
 interface GameBoardProps {
   gameState: GameState;
+}
+
+interface AbilityTarget {
+  ownCardPosition?: { row: number; col: number };
+  opponentPlayerId?: string;
+  opponentCardPosition?: { row: number; col: number };
 }
 
 const GameBoard: React.FC<GameBoardProps> = ({ gameState }) => {
@@ -27,6 +34,7 @@ const GameBoard: React.FC<GameBoardProps> = ({ gameState }) => {
   const [recallablePositions, setRecallablePositions] = useState<{ row: number; col: number }[]>([]);
   const [peekTimeRemaining, setPeekTimeRemaining] = useState(60);
   const [showHelp, setShowHelp] = useState(false);
+  const [abilityTarget, setAbilityTarget] = useState<AbilityTarget>({});
   
   const { 
     currentUser, 
@@ -147,6 +155,71 @@ const GameBoard: React.FC<GameBoardProps> = ({ gameState }) => {
     }
   };
   
+  const handleAbilityTargetSelection = (
+    player: Player, 
+    position: { row: number; col: number }
+  ) => {
+    if (!gameState.activeAbility || !currentUser || currentUser.id !== gameState.activeAbility.playerId) return;
+
+    const { ability } = gameState.activeAbility;
+
+    if (ability === 'peek-self') {
+      // Client-side peek for 3 seconds
+      const cardKey = `${position.row}-${position.col}`;
+      setPeekingPositions(prev => new Set(prev).add(cardKey));
+      setTimeout(() => {
+        setPeekingPositions(prev => {
+          const newSet = new Set(prev);
+          newSet.delete(cardKey);
+          return newSet;
+        });
+      }, 3000);
+      // Execute to advance turn
+      GameService.executeAbility(gameState.id, ability, currentUser.id, {});
+      return;
+    }
+
+    if (ability === 'flip-opponent') {
+      GameService.executeAbility(gameState.id, ability, currentUser.id, {
+        opponentPlayerId: player.id,
+        opponentCardPosition: position,
+      });
+      return;
+    }
+
+    if (ability === 'swap') {
+      if (!abilityTarget.ownCardPosition) {
+        // Step 1: Select own card
+        if (player.id !== currentUser.id) {
+          toast.error("Select one of your own cards first.");
+          return;
+        }
+        setAbilityTarget({ ownCardPosition: position });
+        toast.success("Now select an opponent's card to swap with.");
+      } else {
+        // Step 2: Select opponent's card
+        if (player.id === currentUser.id) {
+          toast.error("Select an opponent's card.");
+          return;
+        }
+        GameService.executeAbility(gameState.id, ability, currentUser.id, {
+          ...abilityTarget,
+          opponentPlayerId: player.id,
+          opponentCardPosition: position,
+        });
+        setAbilityTarget({});
+      }
+    }
+  };
+
+  const cancelAbility = () => {
+    setAbilityTarget({});
+    // In a real scenario, you might want to inform the service layer,
+    // but for now, we just reset the client state. The game will be "stuck"
+    // until the ability is used. A future improvement could be to allow the service
+    // to reset the activeAbility.
+  };
+
   const handleRecallCards = async () => {
     if (recallablePositions.length === 0) return;
     
@@ -209,7 +282,7 @@ const GameBoard: React.FC<GameBoardProps> = ({ gameState }) => {
             <div key={`row-${rowIndex}`} className="flex gap-2 justify-center">
               {row.map((card, colIndex) => {
                 const posKey = `${rowIndex}-${colIndex}`;
-                const canPeek = isCurrentPlayer && peekingPositions.has(posKey);
+                const canPeek = (isCurrentPlayer && peekingPositions.has(posKey)) || (showHelp && card?.isFaceUp === false);
                 const showPeek = canPeek && isPeeking;
                 const isRecallable = isCurrentPlayer && isPositionRecallable(rowIndex, colIndex);
                 
@@ -218,12 +291,14 @@ const GameBoard: React.FC<GameBoardProps> = ({ gameState }) => {
                     key={`card-${rowIndex}-${colIndex}`}
                     card={card}
                     position={{ row: rowIndex, col: colIndex }}
-                    isSelected={isCurrentPlayer && selectedCard?.row === rowIndex && selectedCard?.col === colIndex}
+                    isSelected={isCurrentPlayer && (selectedCard?.row === rowIndex && selectedCard?.col === colIndex || abilityTarget.ownCardPosition?.row === rowIndex && abilityTarget.ownCardPosition?.col === colIndex)}
                     isPeekable={canPeek}
                     canRecall={isRecallable}
                     showPeek={showPeek}
                     onClick={() => {
-                      if (isCurrentPlayer && drawnCard && isMyTurn) {
+                      if (gameState.status === 'awaiting-ability-target') {
+                        handleAbilityTargetSelection(player, { row: rowIndex, col: colIndex });
+                      } else if (isCurrentPlayer && drawnCard && isMyTurn) {
                         handleReplaceCard({ row: rowIndex, col: colIndex });
                       } else if (isCurrentPlayer) {
                         selectCard({ row: rowIndex, col: colIndex });
@@ -239,6 +314,18 @@ const GameBoard: React.FC<GameBoardProps> = ({ gameState }) => {
     );
   };
   
+  const getAbilityPrompt = (ability?: SpecialAbility): string => {
+    switch (ability) {
+      case 'peek-self': return "King's Ability: Select one of your cards to peek at for 3 seconds.";
+      case 'flip-opponent': return "7's Ability: Select an opponent's card to turn face-up permanently.";
+      case 'swap': 
+        return abilityTarget.ownCardPosition 
+          ? "Queen's Ability: Now select an opponent's card to swap with."
+          : "Queen's Ability: Select one of your own cards to swap.";
+      default: return '';
+    }
+  };
+
   if (gameState.status === 'finished') {
     const winner = gameState.players.find(p => p.id === gameState.winner);
     
@@ -340,6 +427,16 @@ const GameBoard: React.FC<GameBoardProps> = ({ gameState }) => {
           </div>
         )}
         
+        {/* Ability Prompt */}
+        {gameState.status === 'awaiting-ability-target' && gameState.activeAbility?.playerId === currentUser?.id && (
+          <div className="bg-blue-500/20 border border-blue-400 rounded-xl p-4 mb-4 text-center">
+            <p className="text-blue-200 font-semibold">{getAbilityPrompt(gameState.activeAbility?.ability)}</p>
+            {gameState.activeAbility?.ability === 'swap' && abilityTarget.ownCardPosition && (
+              <button onClick={cancelAbility} className="text-xs text-white/70 mt-1 hover:underline">Cancel Selection</button>
+            )}
+          </div>
+        )}
+
         {/* Game Controls */}
         {gameState.status === 'starting' && (
           <div className="bg-yellow-500/20 border border-yellow-400 rounded-xl p-4 mb-4">

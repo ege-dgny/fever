@@ -29,7 +29,7 @@ export interface Player {
 
 export type GameMode = 6 | 9 | 12 | 15 | 18 | 21 | 24 | 27 | 30;
 
-export type GameStatus = 'waiting' | 'starting' | 'playing' | 'ending' | 'finished';
+export type GameStatus = 'waiting' | 'starting' | 'playing' | 'awaiting-ability-target' | 'ending' | 'finished';
 
 export interface GameState {
   id: string;
@@ -40,6 +40,11 @@ export interface GameState {
   discardPile: Card[];
   gameMode: GameMode;
   status: GameStatus;
+  activeAbility?: {
+    playerId: string;
+    ability: SpecialAbility;
+    cardId: string;
+  } | null;
   winner: string | null;
   createdAt: Date;
   updatedAt: Date;
