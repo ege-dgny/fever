@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import type { GameState, Card as CardType, Player } from '../types/game';
+import type { GameState, Card as CardType, Player, SpecialAbility } from '../types/game';
 import CardComponent from './Card';
 import useGameStore from '../store/gameStore';
 import { GameService } from '../services/gameService';
@@ -15,7 +15,6 @@ import {
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { canRecallCard } from '../utils/gameUtils';
-import { SpecialAbility } from '../types/game';
 
 interface GameBoardProps {
   gameState: GameState;
