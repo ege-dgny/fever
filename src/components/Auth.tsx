@@ -64,8 +64,8 @@ const Auth: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900 flex items-center justify-center p-4">
-      <div className="bg-white/10 backdrop-blur-lg rounded-3xl shadow-2xl p-8 w-full max-w-md">
+    <div className="min-h-screen flex items-center justify-center p-4">
+      <div className="bg-black/20 backdrop-blur-lg rounded-3xl shadow-2xl p-8 w-full max-w-md border border-white/20">
         <div className="flex flex-col items-center mb-8">
           <div className="bg-white/20 rounded-full p-4 mb-4">
             <User className="w-12 h-12 text-white" />
@@ -94,7 +94,7 @@ const Auth: React.FC = () => {
           <button
             type="submit"
             disabled={isLoading || !playerName.trim()}
-            className="w-full py-3 px-4 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white font-semibold rounded-xl shadow-lg transform transition hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+            className="w-full py-3 px-4 bg-gradient-to-r from-orange-500 to-red-600 hover:from-orange-600 hover:to-red-700 text-white font-semibold rounded-xl shadow-lg transform transition hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
           >
             {isLoading ? 'Signing in...' : 'Start Playing'}
           </button>
