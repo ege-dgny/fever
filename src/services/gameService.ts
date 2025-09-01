@@ -326,160 +326,143 @@ export class GameService {
     return drawnCard;
   }
   
+  static async discardAndReplace(
+    gameId: string,
+    playerId: string,
+    newCardFromDraw: Card,
+    position: { row: number; col: number }
+  ): Promise<void> {
+    const gameRef = doc(db, GAMES_COLLECTION, gameId);
+    try {
+      await runTransaction(db, async (transaction) => {
+        const gameDoc = await transaction.get(gameRef);
+        if (!gameDoc.exists()) { throw "Game not found!"; }
+
+        const game = gameDoc.data() as GameState;
+        const playerIndex = game.players.findIndex(p => p.id === playerId);
+        if (playerIndex === -1) { throw "Player not found!"; }
+
+        const replacedCard = game.players[playerIndex].cards[position.row][position.col];
+        if (!replacedCard) { throw "Cannot replace an empty card slot."; }
+
+        const newPlayers = game.players.map(p => ({ ...p, cards: p.cards.map(row => [...row]) }));
+        newPlayers[playerIndex].cards[position.row][position.col] = { ...newCardFromDraw, isFaceUp: false };
+
+        const cardToDiscard = { ...replacedCard, isFaceUp: true };
+        const newDiscardPile = [cardToDiscard, ...game.discardPile];
+
+        let newStatus = game.status;
+        let newActiveAbility = game.activeAbility;
+        let newCurrentPlayerIndex = game.currentPlayerIndex;
+
+        const ability = cardToDiscard.specialAbility;
+        if (ability && ability === 'double-turn') {
+          // Jack: Player goes again
+        } else if (ability) {
+          newStatus = 'awaiting-ability-target';
+          newActiveAbility = { playerId, ability, cardId: cardToDiscard.id };
+        } else {
+          newCurrentPlayerIndex = (game.currentPlayerIndex + 1) % game.players.length;
+        }
+
+        newPlayers.forEach((p, i) => { p.isCurrentTurn = i === newCurrentPlayerIndex; });
+
+        const firestorePlayers = newPlayers.map(player => ({
+          ...player,
+          cards: player.cards.flat().map((card, index) => ({
+            card: card,
+            row: Math.floor(index / 3),
+            col: index % 3
+          }))
+        }));
+
+        const updatePayload = {
+          players: firestorePlayers,
+          discardPile: newDiscardPile,
+          currentPlayerIndex: newCurrentPlayerIndex,
+          status: newStatus,
+          activeAbility: newActiveAbility || null,
+          lastAction: {
+            type: 'discard',
+            playerId,
+            cardId: cardToDiscard.id,
+            targetPosition: position,
+            timestamp: serverTimestamp()
+          },
+          updatedAt: serverTimestamp()
+        };
+
+        transaction.update(gameRef, cleanForFirestore(updatePayload));
+      });
+    } catch (e) {
+      console.error("Replace and discard transaction failed: ", e);
+      throw e;
+    }
+  }
+
   static async discardDrawnCard(
     gameId: string,
     playerId: string,
     cardToDiscard: Card
   ): Promise<void> {
     const gameRef = doc(db, GAMES_COLLECTION, gameId);
-    const gameDoc = await getDoc(gameRef);
-    
-    if (!gameDoc.exists()) {
-      throw new Error('Game not found');
-    }
-    
-    const game = gameDoc.data() as GameState;
-    
-    // Add the drawn card to discard pile (face-up)
-    const discardedCard = { ...cardToDiscard, isFaceUp: true };
-    game.discardPile.unshift(discardedCard);
-    
-    // Check for special ability and update game state accordingly
-    const ability = discardedCard.specialAbility;
-    if (ability) {
-      if (ability === 'double-turn') {
-        // Jack: Don't advance turn, player goes again.
-        // We simply don't advance the nextPlayerIndex.
-      } else {
-        // 7, Q, K: Await player action for ability
-        game.status = 'awaiting-ability-target';
-        game.activeAbility = {
-          playerId: playerId,
-          ability: ability,
-          cardId: discardedCard.id,
-        };
-      }
-    } else {
-      // No ability, advance turn as normal
-      game.currentPlayerIndex = (game.currentPlayerIndex + 1) % game.players.length;
-    }
-    
-    // Update current turn flags
-    game.players.forEach((p, i) => {
-      p.isCurrentTurn = i === game.currentPlayerIndex;
-    });
-    
-    // Convert players array to Firestore-compatible format
-    const firestorePlayers = game.players.map(player => ({
-      ...player,
-      cards: player.cards.flat().map((card, index) => ({
-        card: card,
-        row: Math.floor(index / 3),
-        col: index % 3
-      }))
-    }));
-    
-    await updateDoc(gameRef, cleanForFirestore({
-      players: firestorePlayers,
-      discardPile: game.discardPile,
-      currentPlayerIndex: game.currentPlayerIndex,
-      status: game.status,
-      activeAbility: game.activeAbility || null,
-      lastAction: {
-        type: 'discard',
-        playerId,
-        cardId: cardToDiscard.id,
-        timestamp: serverTimestamp()
-      },
-      updatedAt: serverTimestamp()
-    }));
-  }
-  
-  static async discardAndReplace(
-    gameId: string, 
-    playerId: string, 
-    cardToDiscard: Card,
-    position: { row: number; col: number }
-  ): Promise<void> {
-    const gameRef = doc(db, GAMES_COLLECTION, gameId);
-    const gameDoc = await getDoc(gameRef);
-    
-    if (!gameDoc.exists()) {
-      throw new Error('Game not found');
-    }
-    
-    const game = gameDoc.data() as GameState;
-    const playerIndex = game.players.findIndex(p => p.id === playerId);
-    
-    if (playerIndex === -1) {
-      throw new Error('Player not found');
-    }
-    
-    // Get the card being replaced
-    const replacedCard = game.players[playerIndex].cards[position.row][position.col];
-    
-    // Update player's cards (the new card stays face down in player's hand)
-    const newCard = { ...cardToDiscard, isFaceUp: false };
-    game.players[playerIndex].cards[position.row][position.col] = newCard;
-    
-    // Add replaced card to discard pile if it exists (face-up)
-    if (replacedCard) {
-      const discardedCard = { ...replacedCard, isFaceUp: true };
-      game.discardPile.unshift(discardedCard);
+    try {
+      await runTransaction(db, async (transaction) => {
+        const gameDoc = await transaction.get(gameRef);
+        if (!gameDoc.exists()) { throw "Game not found!"; }
 
-      // Check for special ability and update game state accordingly
-      const ability = discardedCard.specialAbility;
-      if (ability) {
-        if (ability === 'double-turn') {
-          // Jack: Don't advance turn, player goes again.
+        const game = gameDoc.data() as GameState;
+        
+        const discardedCard = { ...cardToDiscard, isFaceUp: true };
+        const newDiscardPile = [discardedCard, ...game.discardPile];
+
+        let newStatus = game.status;
+        let newActiveAbility = game.activeAbility;
+        let newCurrentPlayerIndex = game.currentPlayerIndex;
+
+        const ability = discardedCard.specialAbility;
+        if (ability && ability === 'double-turn') {
+          // Jack: Player goes again
+        } else if (ability) {
+          newStatus = 'awaiting-ability-target';
+          newActiveAbility = { playerId, ability, cardId: discardedCard.id };
         } else {
-          // 7, Q, K: Await player action for ability
-          game.status = 'awaiting-ability-target';
-          game.activeAbility = {
-            playerId: playerId,
-            ability: ability,
-            cardId: discardedCard.id,
-          };
+          newCurrentPlayerIndex = (game.currentPlayerIndex + 1) % game.players.length;
         }
-      } else {
-        // No ability, advance turn as normal
-        game.currentPlayerIndex = (game.currentPlayerIndex + 1) % game.players.length;
-      }
-    } else {
-      // No card was replaced (shouldn't happen in this function), advance turn
-      game.currentPlayerIndex = (game.currentPlayerIndex + 1) % game.players.length;
+
+        const newPlayers = [...game.players];
+        newPlayers.forEach((p, i) => { p.isCurrentTurn = i === newCurrentPlayerIndex; });
+
+        const firestorePlayers = newPlayers.map(player => ({
+          ...player,
+          cards: player.cards.flat().map((card, index) => ({
+            card: card,
+            row: Math.floor(index / 3),
+            col: index % 3
+          }))
+        }));
+
+        const updatePayload = {
+          players: firestorePlayers,
+          discardPile: newDiscardPile,
+          currentPlayerIndex: newCurrentPlayerIndex,
+          status: newStatus,
+          activeAbility: newActiveAbility || null,
+          lastAction: {
+            type: 'discard',
+            playerId,
+            cardId: cardToDiscard.id,
+            timestamp: serverTimestamp()
+          },
+          updatedAt: serverTimestamp()
+        };
+
+        transaction.update(gameRef, cleanForFirestore(updatePayload));
+      });
+    } catch (e) {
+      console.error("Discard drawn card transaction failed: ", e);
+      throw e;
     }
-    
-    // Update current turn flags
-    game.players.forEach((p, i) => {
-      p.isCurrentTurn = i === game.currentPlayerIndex;
-    });
-    
-    // Convert players array to Firestore-compatible format
-    const firestorePlayers = game.players.map(player => ({
-      ...player,
-      cards: player.cards.flat().map((card, index) => ({
-        card: card,
-        row: Math.floor(index / 3),
-        col: index % 3
-      }))
-    }));
-    
-    await updateDoc(gameRef, cleanForFirestore({
-      players: firestorePlayers,
-      discardPile: game.discardPile,
-      currentPlayerIndex: game.currentPlayerIndex,
-      status: game.status,
-      activeAbility: game.activeAbility || null,
-      lastAction: {
-        type: 'discard',
-        playerId,
-        cardId: cardToDiscard.id,
-        targetPosition: position,
-        timestamp: serverTimestamp()
-      },
-      updatedAt: serverTimestamp()
-    }));
   }
   
   static async executeAbility(
