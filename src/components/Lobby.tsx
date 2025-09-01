@@ -113,8 +113,8 @@ const Lobby: React.FC = () => {
   
   if (currentRoom) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900 flex items-center justify-center p-4">
-        <div className="bg-white/10 backdrop-blur-lg rounded-3xl shadow-2xl p-8 w-full max-w-2xl">
+      <div className="min-h-screen flex items-center justify-center p-4">
+        <div className="bg-black/20 backdrop-blur-lg rounded-3xl shadow-2xl p-8 w-full max-w-2xl border border-white/20">
           <div className="flex justify-between items-center mb-6">
             <h2 className="text-3xl font-bold text-white">Waiting Room</h2>
             <button
@@ -175,7 +175,7 @@ const Lobby: React.FC = () => {
           {currentUser?.id === currentRoom.hostId && currentRoom.playerIds.length >= 2 && (
             <button
               id="start-game-button"
-              className="w-full mt-6 py-3 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white font-semibold rounded-xl shadow-lg transform transition hover:scale-105"
+              className="w-full mt-6 py-3 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white font-semibold rounded-xl shadow-lg transform transition hover:scale-105"
             >
               Start Game
             </button>
@@ -186,8 +186,8 @@ const Lobby: React.FC = () => {
   }
   
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900 flex items-center justify-center p-4">
-      <div className="bg-white/10 backdrop-blur-lg rounded-3xl shadow-2xl p-8 w-full max-w-4xl">
+    <div className="min-h-screen flex items-center justify-center p-4">
+      <div className="bg-black/20 backdrop-blur-lg rounded-3xl shadow-2xl p-8 w-full max-w-4xl border border-white/20">
         <div className="text-center mb-8">
           <h1 className="text-4xl font-bold text-white mb-2">Fever</h1>
           <p className="text-white/70">Welcome, {currentUser?.name}!</p>
@@ -211,7 +211,7 @@ const Lobby: React.FC = () => {
                       onClick={() => setSelectedMode(mode)}
                       className={`py-2 px-3 rounded-lg font-semibold transition ${
                         selectedMode === mode
-                          ? 'bg-purple-600 text-white'
+                          ? 'bg-orange-600 text-white'
                           : 'bg-white/20 text-white/80 hover:bg-white/30'
                       }`}
                     >
@@ -225,7 +225,7 @@ const Lobby: React.FC = () => {
               <button
                 onClick={handleCreateRoom}
                 disabled={isCreating}
-                className="w-full py-3 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white font-semibold rounded-xl shadow-lg transform transition hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+                className="w-full py-3 bg-gradient-to-r from-orange-500 to-red-600 hover:from-orange-600 hover:to-red-700 text-white font-semibold rounded-xl shadow-lg transform transition hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
               >
                 {isCreating ? 'Creating...' : 'Create Room'}
               </button>
@@ -259,7 +259,7 @@ const Lobby: React.FC = () => {
               <button
                 type="submit"
                 disabled={isJoining || roomCode.length !== 6}
-                className="w-full py-3 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white font-semibold rounded-xl shadow-lg transform transition hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+                className="w-full py-3 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white font-semibold rounded-xl shadow-lg transform transition hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
               >
                 {isJoining ? 'Joining...' : 'Join Room'}
               </button>

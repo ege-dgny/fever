@@ -273,7 +273,7 @@ const GameBoard: React.FC<GameBoardProps> = ({ gameState }) => {
   const renderPlayerArea = (player: Player, isCurrentPlayer: boolean = false) => {
     
     return (
-      <div className={`bg-white/10 rounded-xl p-4 ${player.isCurrentTurn ? 'ring-2 ring-yellow-400' : ''}`}>
+      <div className={`bg-black/20 rounded-xl p-4 ${player.isCurrentTurn ? 'ring-2 ring-yellow-400' : ''}`}>
         <div className="flex justify-between items-center mb-3">
           <div>
             <h3 className="text-white font-semibold">
@@ -344,16 +344,16 @@ const GameBoard: React.FC<GameBoardProps> = ({ gameState }) => {
     const winner = gameState.players.find(p => p.id === gameState.winner);
     
     return (
-      <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900 p-4">
-        <div className="max-w-6xl mx-auto">
-          <div className="bg-white/10 backdrop-blur-lg rounded-3xl p-8 text-center mb-6">
+      <div className="min-h-screen p-4 flex items-center justify-center">
+        <div className="max-w-6xl mx-auto w-full">
+          <div className="bg-black/20 backdrop-blur-lg rounded-3xl p-8 text-center mb-6 border border-white/20">
             <Trophy className="w-16 h-16 text-yellow-400 mx-auto mb-4" />
             <h1 className="text-4xl font-bold text-white mb-2">Game Over!</h1>
             <p className="text-2xl text-white/90">Winner: {winner?.name}</p>
             <p className="text-xl text-white/70">Score: {winner?.score}</p>
           </div>
           
-          <div className="bg-white/10 backdrop-blur-lg rounded-3xl p-6">
+          <div className="bg-black/20 backdrop-blur-lg rounded-3xl p-6 border border-white/20">
             <h2 className="text-2xl font-bold text-white mb-4">Final Scores</h2>
             <div className="space-y-3">
               {gameState.players
@@ -375,10 +375,10 @@ const GameBoard: React.FC<GameBoardProps> = ({ gameState }) => {
   }
   
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900 p-4">
+    <div className="min-h-screen p-4">
       <div className="max-w-7xl mx-auto">
         {/* Game Header */}
-        <div className="bg-white/10 backdrop-blur-lg rounded-3xl p-4 mb-4 flex justify-between items-center">
+        <div className="bg-black/20 backdrop-blur-lg rounded-3xl p-4 mb-4 flex justify-between items-center border border-white/20">
           <div className="text-white">
             <p className="text-sm opacity-70">Room Code</p>
             <p className="text-xl font-bold">{gameState.roomCode}</p>
@@ -402,7 +402,7 @@ const GameBoard: React.FC<GameBoardProps> = ({ gameState }) => {
         
         {/* Help Section */}
         {showHelp && (
-          <div className="bg-black/50 backdrop-blur-sm rounded-xl p-4 mb-4">
+          <div className="bg-black/50 backdrop-blur-sm rounded-xl p-4 mb-4 border border-white/10">
             <div className="flex justify-between items-center mb-3">
               <h3 className="text-white font-semibold">Card Values & Abilities</h3>
               <button
@@ -443,8 +443,8 @@ const GameBoard: React.FC<GameBoardProps> = ({ gameState }) => {
         
         {/* Ability Prompt */}
         {gameState.status === 'awaiting-ability-target' && gameState.activeAbility?.playerId === currentUser?.id && (
-          <div className="bg-blue-500/20 border border-blue-400 rounded-xl p-4 mb-4 text-center">
-            <p className="text-blue-200 font-semibold">{getAbilityPrompt(gameState.activeAbility?.ability)}</p>
+          <div className="bg-orange-500/20 border border-orange-400 rounded-xl p-4 mb-4 text-center">
+            <p className="text-orange-200 font-semibold">{getAbilityPrompt(gameState.activeAbility?.ability)}</p>
             {gameState.activeAbility?.ability === 'swap' && abilityTarget.ownCardPosition && (
               <button onClick={cancelAbility} className="text-xs text-white/70 mt-1 hover:underline">Cancel Selection</button>
             )}
@@ -491,7 +491,7 @@ const GameBoard: React.FC<GameBoardProps> = ({ gameState }) => {
           {/* Center Area - Deck and Discard */}
           <div className="space-y-4">
             <h2 className="text-white text-xl font-semibold">Table</h2>
-            <div className="bg-white/10 rounded-xl p-4 space-y-4">
+            <div className="bg-black/20 rounded-xl p-4 space-y-4 border border-white/20">
               {/* Drawn Card */}
               {drawnCard && (
                 <div className="bg-white/20 rounded-lg p-3">
@@ -520,7 +520,7 @@ const GameBoard: React.FC<GameBoardProps> = ({ gameState }) => {
                 <button
                   onClick={handleDrawFromDeck}
                   disabled={!isMyTurn || drawnCard !== null || gameState.status !== 'playing'}
-                  className="w-20 h-28 bg-gradient-to-br from-blue-600 to-purple-600 rounded-lg shadow-lg hover:scale-105 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
+                  className="w-20 h-28 bg-gradient-to-br from-amber-800 to-red-900 rounded-lg shadow-lg hover:scale-105 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
                 >
                   <Layers className="w-8 h-8 text-white/50" />
                 </button>
