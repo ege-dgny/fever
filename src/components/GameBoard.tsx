@@ -12,7 +12,8 @@ import {
   Trophy,
   HelpCircle,
   RotateCcw,
-  Settings
+  Settings,
+  LogOut
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { canRecallCard } from '../utils/gameUtils';
@@ -275,6 +276,19 @@ const GameBoard: React.FC<GameBoardProps> = ({ gameState }) => {
       toast.error('Failed to call stop');
     }
   };
+
+  const handleExitToLobby = async () => {
+    if (!currentUser || !gameState.roomId) return;
+    
+    try {
+      // Reset the game state and return room to waiting status
+      await GameService.resetRoomForNewGame(gameState.roomId);
+      toast.success('Returned to lobby');
+    } catch (error) {
+      console.error('Error exiting to lobby:', error);
+      toast.error('Failed to exit to lobby');
+    }
+  };
   
   const togglePeek = () => {
     if (gameState.status === 'starting' && myPlayer) {
@@ -375,13 +389,23 @@ const GameBoard: React.FC<GameBoardProps> = ({ gameState }) => {
             <p className="text-sm opacity-70">Cards in Deck</p>
             <p className="text-xl font-bold">{gameState.deck.length}</p>
           </div>
-          <button
-            onClick={() => setShowHelp(!showHelp)}
-            className="bg-white/20 hover:bg-white/30 p-2 rounded-lg transition"
-            title="Show card abilities"
-          >
-            <HelpCircle className="w-5 h-5 text-white" />
-          </button>
+          <div className="flex gap-2">
+            <button
+              onClick={() => setShowHelp(!showHelp)}
+              className="bg-white/20 hover:bg-white/30 p-2 rounded-lg transition"
+              title="Show card abilities"
+            >
+              <HelpCircle className="w-5 h-5 text-white" />
+            </button>
+            
+            <button
+              onClick={handleExitToLobby}
+              className="bg-red-600/80 hover:bg-red-700 p-2 rounded-lg transition"
+              title="Exit to lobby"
+            >
+              <LogOut className="w-5 h-5 text-white" />
+            </button>
+          </div>
         </div>
 
         {/* Finished Banner */}

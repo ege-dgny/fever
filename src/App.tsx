@@ -133,6 +133,13 @@ function AppContent() {
               useGameStore.getState().setGameState(gameState);
             }
           });
+        } else {
+          // Room is waiting or no game - clear game state
+          useGameStore.getState().setGameState(null);
+          if (unsubscribeGame) {
+            unsubscribeGame();
+            unsubscribeGame = null;
+          }
         }
       } else {
         // Room was deleted
