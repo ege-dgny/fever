@@ -112,12 +112,12 @@ const CardComponent: React.FC<CardProps> = ({
       )}
       
       {showPeek && !card.isFaceUp && (
-        <div className="absolute inset-0 bg-black/80 rounded-lg flex flex-col items-center justify-center text-white p-2">
-          <div className="text-xs mb-1">Peeking</div>
+        <div className="absolute inset-0 bg-white/95 rounded-lg flex flex-col items-center justify-center text-gray-800 p-2 border-2 border-orange-400">
+          <div className="text-xs mb-1 text-orange-600 font-semibold">Peeking</div>
           <div className={`text-lg font-bold ${getSuitColor(card.suit)}`}>
             {getRankLabel(card)}{getSuitSymbol(card.suit)}
           </div>
-          <div className="text-xs mt-1">Value: {typeof card.value === 'number' ? card.value : ''}</div>
+          <div className="text-xs mt-1 text-gray-600">Value: {typeof card.value === 'number' ? card.value : ''}</div>
         </div>
       )}
       
