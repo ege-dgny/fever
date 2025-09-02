@@ -19,6 +19,42 @@ import type { GameState, GameRoom, Player, GameMode, Card, SpecialAbility } from
 import { createDeck, dealCards, generateRoomCode, calculatePlayerScore } from '../utils/gameUtils';
 import { v4 as uuidv4 } from 'uuid';
 
+// Helper: reconstruct players' hands from flattened Firestore representation to 2D arrays
+function reconstructPlayersHands2D(game: any): Player[] {
+  const rows = Math.max(1, Math.floor((game.gameMode || 6) / 3));
+  return (game.players as any[]).map((player: any) => {
+    const cards2D: (Card | null)[][] = Array.from({ length: rows }, () => [null, null, null]);
+    // If already 2D, return as-is
+    if (Array.isArray(player.cards) && Array.isArray(player.cards[0])) {
+      return player as Player;
+    }
+    // Flattened form: array of { card, row, col }
+    if (Array.isArray(player.cards)) {
+      player.cards.forEach((item: any) => {
+        if (item && item.row !== undefined && item.col !== undefined) {
+          cards2D[item.row][item.col] = item.card || null;
+        }
+      });
+    }
+    return {
+      ...player,
+      cards: cards2D,
+    } as Player;
+  });
+}
+
+// Helper: flatten 2D hands back for Firestore
+function flattenPlayersHandsForFirestore(players: Player[]): any[] {
+  return players.map(player => ({
+    ...player,
+    cards: player.cards.flat().map((card, index) => ({
+      card: card,
+      row: Math.floor(index / 3),
+      col: index % 3
+    }))
+  }));
+}
+
 const ROOMS_COLLECTION = 'rooms';
 const GAMES_COLLECTION = 'games';
 
@@ -338,9 +374,17 @@ export class GameService {
         const gameDoc = await transaction.get(gameRef);
         if (!gameDoc.exists()) { throw "Game not found!"; }
 
-        const game = gameDoc.data() as GameState;
+        const raw = gameDoc.data() as any;
+        const players2D = reconstructPlayersHands2D(raw);
+        const game = { ...raw, players: players2D } as GameState;
+
         const playerIndex = game.players.findIndex(p => p.id === playerId);
         if (playerIndex === -1) { throw "Player not found!"; }
+
+        const rows = game.players[playerIndex].cards.length;
+        if (position.row < 0 || position.row >= rows || position.col < 0 || position.col >= 3) {
+          throw "Invalid replace position";
+        }
 
         const replacedCard = game.players[playerIndex].cards[position.row][position.col];
         if (!replacedCard) { throw "Cannot replace an empty card slot."; }
@@ -349,7 +393,7 @@ export class GameService {
         newPlayers[playerIndex].cards[position.row][position.col] = { ...newCardFromDraw, isFaceUp: false };
 
         const cardToDiscard = { ...replacedCard, isFaceUp: true };
-        const newDiscardPile = [cardToDiscard, ...game.discardPile];
+        const newDiscardPile = [cardToDiscard, ...(game.discardPile || [])];
 
         let newStatus = game.status;
         let newActiveAbility = game.activeAbility;
@@ -367,14 +411,7 @@ export class GameService {
 
         newPlayers.forEach((p, i) => { p.isCurrentTurn = i === newCurrentPlayerIndex; });
 
-        const firestorePlayers = newPlayers.map(player => ({
-          ...player,
-          cards: player.cards.flat().map((card, index) => ({
-            card: card,
-            row: Math.floor(index / 3),
-            col: index % 3
-          }))
-        }));
+        const firestorePlayers = flattenPlayersHandsForFirestore(newPlayers);
 
         const updatePayload = {
           players: firestorePlayers,
@@ -411,10 +448,12 @@ export class GameService {
         const gameDoc = await transaction.get(gameRef);
         if (!gameDoc.exists()) { throw "Game not found!"; }
 
-        const game = gameDoc.data() as GameState;
+        const raw = gameDoc.data() as any;
+        const players2D = reconstructPlayersHands2D(raw);
+        const game = { ...raw, players: players2D } as GameState;
         
         const discardedCard = { ...cardToDiscard, isFaceUp: true };
-        const newDiscardPile = [discardedCard, ...game.discardPile];
+        const newDiscardPile = [discardedCard, ...(game.discardPile || [])];
 
         let newStatus = game.status;
         let newActiveAbility = game.activeAbility;
@@ -433,14 +472,7 @@ export class GameService {
         const newPlayers = [...game.players];
         newPlayers.forEach((p, i) => { p.isCurrentTurn = i === newCurrentPlayerIndex; });
 
-        const firestorePlayers = newPlayers.map(player => ({
-          ...player,
-          cards: player.cards.flat().map((card, index) => ({
-            card: card,
-            row: Math.floor(index / 3),
-            col: index % 3
-          }))
-        }));
+        const firestorePlayers = flattenPlayersHandsForFirestore(newPlayers);
 
         const updatePayload = {
           players: firestorePlayers,
