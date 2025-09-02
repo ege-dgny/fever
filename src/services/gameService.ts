@@ -48,10 +48,16 @@ function reconstructPlayersHands2D(game: any): Player[] {
 function toFirestoreCard(c: any): any {
   if (!c) return null;
   
+  // Debug logging to see what's being passed in
+  if (!c.id || !c.rank) {
+    console.log('WARNING: toFirestoreCard received malformed card:', c);
+  }
+  
   // Preserve original card properties - don't override them
   const originalRank = c.rank;
   const originalValue = c.value;
   const originalSuit = c.suit;
+  const originalId = c.id;
   
   // Only compute missing values, don't override existing ones
   let finalRank = originalRank;
@@ -64,6 +70,7 @@ function toFirestoreCard(c: any): any {
   
   // If rank is missing but value exists, compute rank from value (fallback only)
   if (!finalRank && Number.isFinite(finalValue)) {
+    console.log('FALLBACK: Computing rank from value for card:', c);
     if (finalValue === -1) finalRank = 'joker';
     else if (finalValue === 0) finalRank = '10';
     else if (finalValue === 1) finalRank = 'A';
@@ -71,14 +78,17 @@ function toFirestoreCard(c: any): any {
     else finalRank = String(finalValue);
   }
   
-  return {
-    id: c.id,
+  const result = {
+    id: originalId,
     suit: originalSuit ?? null,
     rank: finalRank,
     value: Number.isFinite(finalValue) ? finalValue : (finalRank ? getCardValue(finalRank as Rank) : 0),
     isFaceUp: !!c.isFaceUp,
     specialAbility: c.specialAbility
   };
+  
+  console.log('toFirestoreCard result:', result);
+  return result;
 }
 
 // Helper: flatten 2D hands back for Firestore
@@ -801,7 +811,9 @@ export class GameService {
         }
 
         const raw = gameDoc.data() as any;
+        console.log('Raw game data from Firestore before reconstruction:', raw);
         const players2D = reconstructPlayersHands2D(raw);
+        console.log('Players after reconstruction:', players2D);
         const game = { ...raw, players: players2D } as GameState;
 
         // Reveal all cards and calculate scores
