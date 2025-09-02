@@ -48,11 +48,6 @@ function reconstructPlayersHands2D(game: any): Player[] {
 function toFirestoreCard(c: any): any {
   if (!c) return null;
   
-  // Debug logging to see what's being passed in
-  if (!c.id || !c.rank) {
-    console.log('WARNING: toFirestoreCard received malformed card:', c);
-  }
-  
   // Preserve original card properties - don't override them
   const originalRank = c.rank;
   const originalValue = c.value;
@@ -70,7 +65,6 @@ function toFirestoreCard(c: any): any {
   
   // If rank is missing but value exists, compute rank from value (fallback only)
   if (!finalRank && Number.isFinite(finalValue)) {
-    console.log('FALLBACK: Computing rank from value for card:', c);
     if (finalValue === -1) finalRank = 'joker';
     else if (finalValue === 0) finalRank = '10';
     else if (finalValue === 1) finalRank = 'A';
@@ -78,7 +72,7 @@ function toFirestoreCard(c: any): any {
     else finalRank = String(finalValue);
   }
   
-  const result = {
+  return {
     id: originalId,
     suit: originalSuit ?? null,
     rank: finalRank,
@@ -86,20 +80,30 @@ function toFirestoreCard(c: any): any {
     isFaceUp: !!c.isFaceUp,
     specialAbility: c.specialAbility
   };
-  
-  console.log('toFirestoreCard result:', result);
-  return result;
 }
 
 // Helper: flatten 2D hands back for Firestore
 function flattenPlayersHandsForFirestore(players: Player[]): any[] {
   return players.map(player => ({
     ...player,
-    cards: player.cards.flat().map((card, index) => ({
-      card: toFirestoreCard(card),
-      row: Math.floor(index / 3),
-      col: index % 3
-    }))
+    cards: player.cards.flat().map((card, index) => {
+      // Debug: Check if we're getting metadata objects instead of cards
+      if (card && typeof card === 'object' && 'card' in card && 'row' in card && 'col' in card) {
+        console.error('ERROR: Card in 2D array is metadata object, not actual card:', card);
+        // Extract the actual card from the metadata
+        return {
+          card: toFirestoreCard(card.card),
+          row: Math.floor(index / 3),
+          col: index % 3
+        };
+      }
+      
+      return {
+        card: toFirestoreCard(card),
+        row: Math.floor(index / 3),
+        col: index % 3
+      };
+    })
   }));
 }
 
@@ -367,20 +371,7 @@ export class GameService {
           player.cards.forEach((item: any) => {
             if (item && item.row !== undefined && item.col !== undefined) {
               const c = item.card || null;
-              if (c) {
-                console.log('Firestore card debug:', {
-                  id: c.id,
-                  rank: c.rank,
-                  value: c.value,
-                  suit: c.suit,
-                  beforeNormalize: c
-                });
-                const normalized = normalizeCard({ ...c });
-                console.log('After normalize:', normalized);
-                cards[item.row][item.col] = normalized;
-              } else {
-                cards[item.row][item.col] = c;
-              }
+              cards[item.row][item.col] = c ? normalizeCard({ ...c }) : c;
             }
           });
           
@@ -811,25 +802,14 @@ export class GameService {
         }
 
         const raw = gameDoc.data() as any;
-        console.log('Raw game data from Firestore before reconstruction:', raw);
         const players2D = reconstructPlayersHands2D(raw);
-        console.log('Players after reconstruction:', players2D);
         const game = { ...raw, players: players2D } as GameState;
 
         // Reveal all cards and calculate scores
         game.players.forEach((player) => {
           player.cards.forEach((row) => {
             row.forEach((card) => {
-              if (card) {
-                card.isFaceUp = true;
-                // Debug logging
-                console.log('End game card debug:', {
-                  id: card.id,
-                  rank: card.rank,
-                  value: card.value,
-                  suit: card.suit
-                });
-              }
+              if (card) card.isFaceUp = true;
             });
           });
           player.score = calculatePlayerScore(player.cards);

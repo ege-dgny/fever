@@ -55,18 +55,6 @@ const CardComponent: React.FC<CardProps> = ({
   };
   
   const getRankLabel = (card: CardType): string => {
-    // Debug logging for face-up cards
-    if (card.isFaceUp) {
-      console.log('Card display debug:', {
-        id: card.id,
-        rank: card.rank,
-        value: card.value,
-        suit: card.suit,
-        rankType: typeof card.rank,
-        valueType: typeof card.value
-      });
-    }
-    
     // Always prefer the rank property if it exists
     if (card.rank) {
       return card.rank === 'joker' ? 'Joker' : String(card.rank);
