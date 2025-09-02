@@ -157,10 +157,10 @@ export function getCardDisplay(card: Card | null): string {
   if (card.rank === 'joker') return 'Joker';
   
   const suitSymbols: Record<Suit, string> = {
-    hearts: 'H',
-    diamonds: 'D',
-    clubs: 'C',
-    spades: 'S'
+    hearts: '♥',
+    diamonds: '♦',
+    clubs: '♣',
+    spades: '♠'
   };
   
   return `${card.rank}${card.suit ? suitSymbols[card.suit] : ''}`;

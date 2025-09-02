@@ -36,10 +36,10 @@ const CardComponent: React.FC<CardProps> = ({
   const getSuitSymbol = (suit: Suit | null): string => {
     if (!suit) return ''; // Joker has no suit symbol
     const symbols: Record<Suit, string> = {
-      hearts: 'H',
-      diamonds: 'D',
-      clubs: 'C',
-      spades: 'S'
+      hearts: '♥',
+      diamonds: '♦',
+      clubs: '♣',
+      spades: '♠'
     };
     return symbols[suit];
   };

@@ -55,7 +55,7 @@ const GameBoard: React.FC<GameBoardProps> = ({ gameState }) => {
       }
       setPeekingPositions(positions);
       setIsPeeking(true); // Auto-show peek at start
-      setPeekTimeRemaining(60);
+      setPeekTimeRemaining(20);
       
       // Countdown timer
       const interval = setInterval(() => {

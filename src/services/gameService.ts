@@ -367,7 +367,7 @@ export class GameService {
         status: 'playing',
         updatedAt: serverTimestamp()
       }));
-    }, 60000); // 60 seconds (1 minute) for players to peek at bottom row
+    }, 20000); // 20 seconds for players to peek at bottom row
     
     return gameState;
   }
