@@ -70,7 +70,7 @@ const Auth: React.FC = () => {
           <div className="bg-white/20 rounded-full p-4 mb-4">
             <User className="w-12 h-12 text-white" />
           </div>
-          <h1 className="text-4xl font-bold text-white mb-2">Fever</h1>
+          <h1 className="text-4xl font-bold text-white mb-2">fever</h1>
           <p className="text-white/70 text-center">Enter your name to start playing</p>
         </div>
         
@@ -101,7 +101,7 @@ const Auth: React.FC = () => {
         </form>
         
         <div className="mt-8 text-center text-white/60 text-sm">
-          <p>Play with friends in real-time or turn-based mode</p>
+          <p> </p>
           
           {/* Firebase Status Indicator */}
           <div className="mt-4 flex justify-center gap-4 text-xs">
