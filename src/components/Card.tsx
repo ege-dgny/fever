@@ -70,7 +70,7 @@ const CardComponent: React.FC<CardProps> = ({
       {card.isFaceUp ? (
         <div className="h-full flex flex-col items-center justify-center p-2">
           <div className={`text-2xl font-bold ${getSuitColor(card.suit)}`}>
-            {card.rank === 'joker' ? 'Joker' : card.rank}
+            {(card.rank === 'joker' ? 'Joker' : card.rank) || ''}
           </div>
           <div className={`text-3xl ${getSuitColor(card.suit)}`}>
             {getSuitSymbol(card.suit)}
@@ -80,7 +80,7 @@ const CardComponent: React.FC<CardProps> = ({
           )}
         </div>
       ) : (
-        <div className="h-full flex items-center justify-center">
+        <div className="h-full flex items-center justify-center bg-gradient-to-br from-amber-700 to-red-800 rounded-lg">
           <div className="text-white text-4xl opacity-20">F</div>
         </div>
       )}
@@ -105,7 +105,7 @@ const CardComponent: React.FC<CardProps> = ({
       {card.isFaceUp && (
         <div className="absolute bottom-0 left-0 right-0 bg-black/80 text-white text-xs p-1 rounded-b-lg opacity-0 hover:opacity-100 transition-opacity">
           <div className="flex justify-between items-center">
-            <span>{card.value > 0 ? `+${card.value}` : card.value} pts</span>
+            <span>{typeof card.value === 'number' ? (card.value > 0 ? `+${card.value}` : card.value) : ''} pts</span>
             {hasAbility && (
               <span className="text-yellow-300 text-[10px]">{getAbilityDescription(card.specialAbility)}</span>
             )}

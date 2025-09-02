@@ -27,8 +27,12 @@ function reconstructPlayersHands2D(game: any): Player[] {
     // If already 2D, ensure values exist and return
     if (Array.isArray(player.cards) && Array.isArray(player.cards[0])) {
       const fixed = (player.cards as (Card | null)[][]).map(r => r.map(c => {
-        if (c && (c as any).value == null && (c as any).rank) {
-          (c as any).value = getCardValue((c as any).rank);
+        if (c) {
+          if ((c as any).value == null && (c as any).rank) {
+            (c as any).value = getCardValue((c as any).rank);
+          }
+          (c as any).value = Number((c as any).value);
+          (c as any).isFaceUp = !!(c as any).isFaceUp;
         }
         return c;
       }));
@@ -39,8 +43,12 @@ function reconstructPlayersHands2D(game: any): Player[] {
       player.cards.forEach((item: any) => {
         if (item && item.row !== undefined && item.col !== undefined) {
           const c = item.card || null;
-          if (c && c.value == null && c.rank) {
-            c.value = getCardValue(c.rank);
+          if (c) {
+            if ((c as any).value == null && (c as any).rank) {
+              (c as any).value = getCardValue((c as any).rank);
+            }
+            (c as any).value = Number((c as any).value);
+            (c as any).isFaceUp = !!(c as any).isFaceUp;
           }
           cards2D[item.row][item.col] = c;
         }
@@ -307,8 +315,12 @@ export class GameService {
           player.cards.forEach((item: any) => {
             if (item && item.row !== undefined && item.col !== undefined) {
               const c = item.card || null;
-              if (c && (c as any).value == null && (c as any).rank) {
-                (c as any).value = getCardValue((c as any).rank);
+              if (c) {
+                if ((c as any).value == null && (c as any).rank) {
+                  (c as any).value = getCardValue((c as any).rank);
+                }
+                (c as any).value = Number((c as any).value);
+                (c as any).isFaceUp = !!(c as any).isFaceUp;
               }
               cards[item.row][item.col] = c;
             }
