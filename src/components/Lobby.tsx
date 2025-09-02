@@ -77,7 +77,7 @@ const Lobby: React.FC = () => {
   
   const shareGameLink = () => {
     if (currentRoom) {
-      const gameUrl = `${window.location.origin}/join/${currentRoom.code}`;
+      const gameUrl = `${window.location.origin}/?join=${currentRoom.code}`;
       
       if (navigator.share) {
         // Use Web Share API if available (mobile)
@@ -168,7 +168,7 @@ const Lobby: React.FC = () => {
             </div>
             <p className="text-white/70">Game Mode: {currentRoom.gameMode} cards</p>
             <p className="text-white/60 text-sm mt-2">
-              Share link: {window.location.origin}/join/{currentRoom.code}
+              Share link: {window.location.origin}/?join={currentRoom.code}
             </p>
           </div>
           

@@ -8,6 +8,7 @@ import Auth from './components/Auth';
 import Lobby from './components/Lobby';
 import GameBoard from './components/GameBoard';
 import { GameService } from './services/gameService';
+import { PlayerService } from './services/playerService';
 import toast from 'react-hot-toast';
 
 function AppContent() {
@@ -58,6 +59,86 @@ function AppContent() {
       joinRoom();
     }
   }, [roomCodeFromUrl, currentUser, currentRoom, setCurrentRoom]);
+
+  // Subscribe to room updates when user has a room
+  useEffect(() => {
+    if (!currentRoom) return;
+    
+    let unsubscribeGame: (() => void) | null = null;
+    
+    const unsubscribeRoom = GameService.subscribeToRoom(currentRoom.id, (room) => {
+      if (room) {
+        setCurrentRoom(room);
+        
+        // If game has started, subscribe to game updates
+        if (room.gameId && room.status === 'in-game') {
+          // Unsubscribe from previous game if any
+          if (unsubscribeGame) {
+            unsubscribeGame();
+          }
+          
+          unsubscribeGame = GameService.subscribeToGame(room.gameId, (gameState) => {
+            if (gameState) {
+              useGameStore.getState().setGameState(gameState);
+            }
+          });
+        }
+      } else {
+        // Room was deleted
+        setCurrentRoom(null);
+        if (unsubscribeGame) {
+          unsubscribeGame();
+          unsubscribeGame = null;
+        }
+      }
+    });
+    
+    return () => {
+      unsubscribeRoom();
+      if (unsubscribeGame) {
+        unsubscribeGame();
+      }
+    };
+  }, [currentRoom?.id, setCurrentRoom]);
+
+  // Handle start game button clicks
+  useEffect(() => {
+    if (!currentRoom || !currentUser) return;
+    
+    const startGameButton = document.getElementById('start-game-button');
+    if (!startGameButton) return;
+    
+    const handleStartGame = async () => {
+      if (currentUser.id !== currentRoom.hostId) return;
+      
+      try {
+        // Fetch actual player data from Firestore
+        const playerDataList = await PlayerService.getPlayers(currentRoom.playerIds);
+        
+        // Create player objects with actual names
+        const players = currentRoom.playerIds.map(id => {
+          const playerData = playerDataList.find(p => p.id === id);
+          return {
+            id,
+            name: playerData?.name || `Player ${currentRoom.playerIds.indexOf(id) + 1}`,
+            email: playerData?.email || `${id}@anonymous.com`
+          };
+        });
+        
+        await GameService.startGame(currentRoom, players);
+        toast.success('Game started!');
+      } catch (error) {
+        console.error('Error starting game:', error);
+        toast.error('Failed to start game');
+      }
+    };
+    
+    startGameButton.addEventListener('click', handleStartGame);
+    
+    return () => {
+      startGameButton.removeEventListener('click', handleStartGame);
+    };
+  }, [currentRoom, currentUser]);
 
   if (loading) {
     return (
