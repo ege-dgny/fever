@@ -271,9 +271,9 @@ export class GameService {
   static subscribeToGame(gameId: string, callback: (game: GameState | null) => void): () => void {
     const gameRef = doc(db, GAMES_COLLECTION, gameId);
     
-    const unsubscribe = onSnapshot(gameRef, (doc) => {
-      if (doc.exists()) {
-        const data = doc.data();
+    const unsubscribe = onSnapshot(gameRef, (docSnap) => {
+      if (docSnap.exists()) {
+        const data = docSnap.data();
         
         // Convert flattened cards array back to 2D array
         const players = data.players.map((player: any) => {
@@ -282,7 +282,7 @@ export class GameService {
             return {
               ...player,
               cards: []
-            };
+            } as Player;
           }
           
           const rows = Math.max(...player.cards.map((c: any) => c.row)) + 1;
@@ -303,11 +303,11 @@ export class GameService {
           return {
             ...player,
             cards
-          };
+          } as Player;
         });
         
         const game: GameState = {
-          id: doc.id,
+          id: docSnap.id,
           roomCode: data.roomCode,
           players,
           currentPlayerIndex: data.currentPlayerIndex,
@@ -315,6 +315,7 @@ export class GameService {
           discardPile: data.discardPile || [],
           gameMode: data.gameMode,
           status: data.status,
+          activeAbility: data.activeAbility || null,
           winner: data.winner,
           createdAt: data.createdAt?.toDate ? data.createdAt.toDate() : new Date(data.createdAt?.seconds * 1000 || Date.now()),
           updatedAt: data.updatedAt?.toDate ? data.updatedAt.toDate() : new Date(data.updatedAt?.seconds * 1000 || Date.now()),

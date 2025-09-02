@@ -216,15 +216,21 @@ const GameBoard: React.FC<GameBoardProps> = ({ gameState }) => {
           return;
         }
         
+        const own = abilityTarget.ownCardPosition;
+        if (!own) {
+          toast.error('Select your card first.');
+          return;
+        }
+        
         // Trigger animation
-        const ownPosString = `${currentUser.id}-${abilityTarget.ownCardPosition.row}-${abilityTarget.ownCardPosition.col}`;
+        const ownPosString = `${currentUser.id}-${own.row}-${own.col}`;
         const opponentPosString = `${player.id}-${position.row}-${position.col}`;
         setSwappingPositions([ownPosString, opponentPosString]);
 
         (async () => {
           try {
             await GameService.executeAbility(gameState.id, ability, currentUser.id, {
-              ...abilityTarget,
+              ownCardPosition: own,
               opponentPlayerId: player.id,
               opponentCardPosition: position,
             });
@@ -233,7 +239,6 @@ const GameBoard: React.FC<GameBoardProps> = ({ gameState }) => {
             console.error(e);
             toast.error('Failed to swap cards');
           } finally {
-            // Reset state after animation
             setTimeout(() => {
               setAbilityTarget({});
               setSwappingPositions([]);
