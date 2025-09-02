@@ -245,11 +245,12 @@ export class GameService {
     const roomDoc = querySnapshot.docs[0];
     const room = roomDoc.data() as GameRoom;
     
-    if (room.status !== 'waiting') {
+    // Allow reconnection for existing players even if game has started
+    if (room.status !== 'waiting' && !room.playerIds.includes(playerId)) {
       throw new Error('Game has already started');
     }
     
-    if (room.playerIds.length >= room.maxPlayers) {
+    if (room.playerIds.length >= room.maxPlayers && !room.playerIds.includes(playerId)) {
       throw new Error('Room is full');
     }
     

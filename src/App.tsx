@@ -39,26 +39,77 @@ function AppContent() {
     return () => unsubscribe();
   }, [setCurrentUser]);
 
-  // Handle room joining from URL
+  // Handle room joining from URL and session recovery
   useEffect(() => {
-    if (roomCodeFromUrl && currentUser && !currentRoom) {
-      const joinRoom = async () => {
+    if (!currentUser) return;
+
+    const handleRoomConnection = async () => {
+      // First, try to recover from localStorage
+      let roomToConnect = null;
+      
+      try {
+        const savedRoom = localStorage.getItem('fever-current-room');
+        if (savedRoom) {
+          roomToConnect = JSON.parse(savedRoom);
+        }
+      } catch (error) {
+        console.error('Failed to parse saved room:', error);
+      }
+
+      // If there's a room code in URL, prioritize that
+      if (roomCodeFromUrl) {
         try {
-          const room = await GameService.joinRoom(roomCodeFromUrl.toUpperCase(), currentUser.id);
-          if (room) {
-            setCurrentRoom(room);
-            toast.success('Joined room successfully!');
+          const roomFromUrl = await GameService.getRoomByCode(roomCodeFromUrl.toUpperCase());
+          if (roomFromUrl && roomFromUrl.playerIds.includes(currentUser.id)) {
+            // User is already in this room, just reconnect
+            roomToConnect = roomFromUrl;
+            toast.success('Reconnected to your game!');
+          } else if (roomFromUrl && !roomFromUrl.playerIds.includes(currentUser.id)) {
+            // User is not in this room, try to join
+            const joinedRoom = await GameService.joinRoom(roomCodeFromUrl.toUpperCase(), currentUser.id);
+            if (joinedRoom) {
+              roomToConnect = joinedRoom;
+              toast.success('Joined room successfully!');
+            } else {
+              toast.error('Room not found or game already started');
+            }
           } else {
             toast.error('Room not found');
           }
         } catch (error: any) {
-          console.error('Error joining room from URL:', error);
-          toast.error(error.message || 'Failed to join room');
+          console.error('Error connecting to room from URL:', error);
+          toast.error(error.message || 'Failed to connect to room');
         }
-      };
-      joinRoom();
+      }
+      // If no URL but we have a saved room, try to reconnect
+      else if (roomToConnect) {
+        try {
+          const updatedRoom = await GameService.getRoomByCode(roomToConnect.code);
+          if (updatedRoom && updatedRoom.playerIds.includes(currentUser.id)) {
+            roomToConnect = updatedRoom;
+            console.log('Session recovered automatically');
+          } else {
+            // Room no longer exists or user not in it
+            localStorage.removeItem('fever-current-room');
+            roomToConnect = null;
+          }
+        } catch (error) {
+          console.error('Session recovery failed:', error);
+          localStorage.removeItem('fever-current-room');
+          roomToConnect = null;
+        }
+      }
+
+      if (roomToConnect && !currentRoom) {
+        setCurrentRoom(roomToConnect);
+      }
+    };
+
+    // Only run this once when user is authenticated and we don't have a room
+    if (!currentRoom) {
+      handleRoomConnection();
     }
-  }, [roomCodeFromUrl, currentUser, currentRoom, setCurrentRoom]);
+  }, [currentUser, roomCodeFromUrl, currentRoom, setCurrentRoom]);
 
   // Subscribe to room updates when user has a room
   useEffect(() => {
