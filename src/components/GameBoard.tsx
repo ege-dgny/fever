@@ -4,7 +4,6 @@ import CardComponent from './Card';
 import useGameStore from '../store/gameStore';
 import { GameService } from '../services/gameService';
 import { 
-  RefreshCw, 
   StopCircle, 
   Eye,
   Layers,
@@ -237,23 +236,6 @@ const GameBoard: React.FC<GameBoardProps> = ({ gameState }) => {
     // to reset the activeAbility.
   };
 
-  const handleRecallCards = async () => {
-    if (recallablePositions.length === 0) return;
-    
-    try {
-      await GameService.recallCards(
-        gameState.id,
-        currentUser!.id,
-        recallablePositions
-      );
-      toast.success(`Recalled ${recallablePositions.length} card(s)!`);
-      setRecallablePositions([]);
-    } catch (error) {
-      console.error('Error recalling cards:', error);
-      toast.error('Failed to recall cards');
-    }
-  };
-  
   const handleCallStop = async () => {
     if (!isMyTurn) return;
     
