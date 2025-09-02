@@ -268,14 +268,14 @@ export class GameService {
         ...player,
         // Flatten the 2D array into a 1D array with metadata
         cards: player.cards.flat().map((card, index) => ({
-          card: card || null,
+          card: toFirestoreCard(card),
           row: Math.floor(index / 3),
           col: index % 3
         }))
       })),
       currentPlayerIndex: gameState.currentPlayerIndex,
-      deck: gameState.deck || [],
-      discardPile: gameState.discardPile || [],
+      deck: (gameState.deck || []).map(c => toFirestoreCard(c)),
+      discardPile: (gameState.discardPile || []).map(c => toFirestoreCard(c)),
       gameMode: gameState.gameMode,
       status: gameState.status,
       winner: gameState.winner || null,
@@ -454,7 +454,7 @@ export class GameService {
 
         const updatePayload = {
           players: firestorePlayers,
-          discardPile: newDiscardPile,
+          discardPile: newDiscardPile.map(c => toFirestoreCard(c)),
           currentPlayerIndex: newCurrentPlayerIndex,
           status: newStatus,
           activeAbility: newActiveAbility || null,
@@ -515,7 +515,7 @@ export class GameService {
 
         const updatePayload = {
           players: firestorePlayers,
-          discardPile: newDiscardPile,
+          discardPile: newDiscardPile.map(c => toFirestoreCard(c)),
           currentPlayerIndex: newCurrentPlayerIndex,
           status: newStatus,
           activeAbility: newActiveAbility || null,
@@ -648,7 +648,7 @@ export class GameService {
     const updatedDiscardPile = game.discardPile.slice(1);
     
     await updateDoc(gameRef, cleanForFirestore({
-      discardPile: updatedDiscardPile,
+      discardPile: updatedDiscardPile.map(c => toFirestoreCard(c)),
       updatedAt: serverTimestamp()
     }));
     
@@ -692,7 +692,7 @@ export class GameService {
     const firestorePlayers = game.players.map(player => ({
       ...player,
       cards: player.cards.flat().map((card, index) => ({
-        card: card,
+        card: toFirestoreCard(card),
         row: Math.floor(index / 3),
         col: index % 3
       }))
@@ -732,7 +732,7 @@ export class GameService {
     const firestorePlayers = game.players.map(player => ({
       ...player,
       cards: player.cards.flat().map((card, index) => ({
-        card: card,
+        card: toFirestoreCard(card),
         row: Math.floor(index / 3),
         col: index % 3
       }))
