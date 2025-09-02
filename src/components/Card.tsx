@@ -70,7 +70,12 @@ const CardComponent: React.FC<CardProps> = ({
       {card.isFaceUp ? (
         <div className="h-full flex flex-col items-center justify-center p-2">
           <div className={`text-2xl font-bold ${getSuitColor(card.suit)}`}>
-            {(card.rank === 'joker' ? 'Joker' : card.rank) || ''}
+            {(() => {
+              if (card.rank === 'joker') return 'Joker';
+              if (card.rank && typeof card.rank === 'string') return card.rank;
+              if (typeof (card as any).value === 'number') return String((card as any).value);
+              return '';
+            })()}
           </div>
           <div className={`text-3xl ${getSuitColor(card.suit)}`}>
             {getSuitSymbol(card.suit)}
