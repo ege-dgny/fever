@@ -164,7 +164,7 @@ const GameBoard: React.FC<GameBoardProps> = ({ gameState }) => {
     const { ability } = gameState.activeAbility;
 
     if (ability === 'peek-self') {
-      // Client-side peek for 3 seconds
+      // Client-side peek for 5 seconds, then advance turn
       const cardKey = `${position.row}-${position.col}`;
       setPeekingPositions(prev => new Set(prev).add(cardKey));
       setTimeout(() => {
@@ -173,9 +173,10 @@ const GameBoard: React.FC<GameBoardProps> = ({ gameState }) => {
           newSet.delete(cardKey);
           return newSet;
         });
-      }, 3000);
-      // Execute to advance turn
-      GameService.executeAbility(gameState.id, ability, currentUser.id, {});
+        if (currentUser) {
+          GameService.executeAbility(gameState.id, ability, currentUser.id, {});
+        }
+      }, 5000);
       return;
     }
 
@@ -330,7 +331,7 @@ const GameBoard: React.FC<GameBoardProps> = ({ gameState }) => {
   
   const getAbilityPrompt = (ability?: SpecialAbility): string => {
     switch (ability) {
-      case 'peek-self': return "King's Ability: Select one of your cards to peek at for 3 seconds.";
+      case 'peek-self': return "King's Ability: Select one of your cards to peek at for 5 seconds.";
       case 'flip-opponent': return "7's Ability: Select an opponent's card to turn face-up permanently.";
       case 'swap': 
         return abilityTarget.ownCardPosition 
