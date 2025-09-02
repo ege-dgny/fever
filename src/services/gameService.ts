@@ -516,15 +516,20 @@ export class GameService {
           throw new Error("Game not found!");
         }
         
-        const game = gameDoc.data() as GameState;
+        const raw = gameDoc.data() as any;
+        const players2D = reconstructPlayersHands2D(raw);
+        const game = { ...raw, players: players2D } as GameState;
         
         // --- Apply Ability Logic ---
         if (ability === 'flip-opponent' && targets.opponentPlayerId && targets.opponentCardPosition) {
           const opponentIndex = game.players.findIndex(p => p.id === targets.opponentPlayerId);
           if (opponentIndex !== -1) {
-            const card = game.players[opponentIndex].cards[targets.opponentCardPosition.row][targets.opponentCardPosition.col];
-            if (card) {
-              card.isFaceUp = true;
+            const { row, col } = targets.opponentCardPosition;
+            if (row >= 0 && row < game.players[opponentIndex].cards.length && col >= 0 && col < 3) {
+              const card = game.players[opponentIndex].cards[row][col];
+              if (card) {
+                card.isFaceUp = true;
+              }
             }
           }
         }
@@ -534,36 +539,38 @@ export class GameService {
           const opponentIndex = game.players.findIndex(p => p.id === targets.opponentPlayerId);
           
           if (playerIndex !== -1 && opponentIndex !== -1) {
-            const ownCard = game.players[playerIndex].cards[targets.ownCardPosition.row][targets.ownCardPosition.col];
-            const opponentCard = game.players[opponentIndex].cards[targets.opponentCardPosition.row][targets.opponentCardPosition.col];
-            
-            // Perform the swap
-            game.players[playerIndex].cards[targets.ownCardPosition.row][targets.ownCardPosition.col] = opponentCard;
-            game.players[opponentIndex].cards[targets.opponentCardPosition.row][targets.opponentCardPosition.col] = ownCard;
+            const { row: ownRow, col: ownCol } = targets.ownCardPosition;
+            const { row: oppRow, col: oppCol } = targets.opponentCardPosition;
+
+            if (
+              ownRow >= 0 && ownRow < game.players[playerIndex].cards.length && ownCol >= 0 && ownCol < 3 &&
+              oppRow >= 0 && oppRow < game.players[opponentIndex].cards.length && oppCol >= 0 && oppCol < 3
+            ) {
+              const ownCard = game.players[playerIndex].cards[ownRow][ownCol];
+              const opponentCard = game.players[opponentIndex].cards[oppRow][oppCol];
+              
+              // Perform the swap (cards can be face-up or face-down)
+              game.players[playerIndex].cards[ownRow][ownCol] = opponentCard;
+              game.players[opponentIndex].cards[oppRow][oppCol] = ownCard;
+            }
           }
         }
 
-        // King's peek is client-side, this call just advances the turn.
+        // King's peek is client-side; advancing turn happens here after client calls executeAbility.
         
         // --- Reset State and Advance Turn ---
+        const nextIndex = (game.currentPlayerIndex + 1) % game.players.length;
         game.status = 'playing';
         game.activeAbility = null;
-        game.currentPlayerIndex = (game.currentPlayerIndex + 1) % game.players.length;
+        game.currentPlayerIndex = nextIndex;
         
         // Update current turn flags
         game.players.forEach((p, i) => {
-          p.isCurrentTurn = i === game.currentPlayerIndex;
+          p.isCurrentTurn = i === nextIndex;
         });
         
         // Convert players array to Firestore-compatible format before updating
-        const firestorePlayers = game.players.map(player => ({
-          ...player,
-          cards: player.cards.flat().map((card, index) => ({
-            card: card,
-            row: Math.floor(index / 3),
-            col: index % 3
-          }))
-        }));
+        const firestorePlayers = flattenPlayersHandsForFirestore(game.players);
         
         transaction.update(gameRef, cleanForFirestore({
           players: firestorePlayers,
