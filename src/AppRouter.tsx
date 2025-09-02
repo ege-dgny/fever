@@ -40,7 +40,7 @@ function GameApp() {
       unsubscribe();
       SessionRecovery.cleanup();
     };
-  }, [setCurrentUser]);
+  }, []); // Empty dependency array - only run once on mount
   
   // Handle direct room joining via URL
   useEffect(() => {
