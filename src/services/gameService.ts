@@ -210,6 +210,30 @@ export class GameService {
     return room;
   }
   
+  static async getRoomByCode(roomCode: string): Promise<GameRoom | null> {
+    const q = query(collection(db, ROOMS_COLLECTION), where('code', '==', roomCode));
+    const querySnapshot = await getDocs(q);
+    
+    if (querySnapshot.empty) {
+      return null;
+    }
+    
+    const roomDoc = querySnapshot.docs[0];
+    const data = roomDoc.data();
+    
+    return {
+      id: roomDoc.id,
+      code: data.code,
+      hostId: data.hostId,
+      playerIds: data.playerIds,
+      gameMode: data.gameMode,
+      maxPlayers: data.maxPlayers,
+      status: data.status,
+      createdAt: data.createdAt?.toDate ? data.createdAt.toDate() : new Date(data.createdAt?.seconds * 1000 || Date.now()),
+      gameId: data.gameId
+    };
+  }
+
   static async joinRoom(roomCode: string, playerId: string): Promise<GameRoom | null> {
     const q = query(collection(db, ROOMS_COLLECTION), where('code', '==', roomCode));
     const querySnapshot = await getDocs(q);

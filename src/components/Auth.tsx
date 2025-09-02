@@ -6,11 +6,12 @@ import { User, CheckCircle, XCircle } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useFirebaseStatus } from '../hooks/useFirebaseStatus';
 import { PlayerService } from '../services/playerService';
+import { GameService } from '../services/gameService';
 
 const Auth: React.FC = () => {
   const [playerName, setPlayerName] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const setCurrentUser = useGameStore(state => state.setCurrentUser);
+  const { setCurrentUser, setCurrentRoom } = useGameStore();
   const firebaseStatus = useFirebaseStatus();
 
   // Removed automatic test - it was causing too many auth attempts
@@ -44,7 +45,26 @@ const Auth: React.FC = () => {
         email: email
       });
       
-      toast.success(`Welcome, ${playerName}!`);
+      // Check for pending room code from URL navigation
+      const pendingRoomCode = sessionStorage.getItem('pendingRoomCode');
+      if (pendingRoomCode) {
+        sessionStorage.removeItem('pendingRoomCode');
+        try {
+          const room = await GameService.joinRoom(pendingRoomCode, user.uid);
+          if (room) {
+            setCurrentRoom(room);
+            toast.success(`Welcome, ${playerName}! Joined room ${pendingRoomCode}.`);
+          } else {
+            toast.success(`Welcome, ${playerName}!`);
+            toast.error('Room not found');
+          }
+        } catch (error) {
+          console.error('Error joining pending room:', error);
+          toast.success(`Welcome, ${playerName}!`);
+        }
+      } else {
+        toast.success(`Welcome, ${playerName}!`);
+      }
     } catch (error: any) {
       console.error('Error signing in:', error);
       

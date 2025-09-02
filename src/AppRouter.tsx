@@ -9,6 +9,7 @@ import Lobby from './components/Lobby';
 import GameBoard from './components/GameBoard';
 import { GameService } from './services/gameService';
 import { PlayerService } from './services/playerService';
+import { SessionRecovery } from './utils/sessionRecovery';
 import toast from 'react-hot-toast';
 
 function GameApp() {
@@ -18,20 +19,32 @@ function GameApp() {
   const { roomCode } = useParams<{ roomCode: string }>();
   
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
         setCurrentUser({
           id: user.uid,
           name: user.displayName || 'Anonymous',
           email: user.email || `${user.uid}@anonymous.com`
         });
+        
+        // Attempt session recovery after user is authenticated
+        try {
+          await SessionRecovery.recoverSession();
+        } catch (error) {
+          console.error('Session recovery failed:', error);
+        }
       } else {
         setCurrentUser(null);
+        // Clean up any active subscriptions
+        SessionRecovery.cleanup();
       }
       setLoading(false);
     });
     
-    return () => unsubscribe();
+    return () => {
+      unsubscribe();
+      SessionRecovery.cleanup();
+    };
   }, [setCurrentUser]);
   
   // Handle direct room joining via URL
@@ -141,6 +154,16 @@ function GameApp() {
     );
   }
   
+  // Add cleanup on page unload
+  useEffect(() => {
+    const handleBeforeUnload = () => {
+      SessionRecovery.cleanup();
+    };
+    
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, []);
+
   return (
     <>
       <Toaster 

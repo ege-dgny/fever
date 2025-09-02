@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { persist } from 'zustand/middleware';
 import type { Player, GameState, GameRoom } from '../types/game';
 
 interface GameStore {
@@ -41,14 +42,16 @@ interface GameStore {
   reset: () => void;
 }
 
-const useGameStore = create<GameStore>((set, get) => ({
-  // Initial state
-  currentUser: null,
-  currentRoom: null,
-  gameState: null,
-  selectedCard: null,
-  peekedCards: new Map(),
-  isMyTurn: false,
+const useGameStore = create<GameStore>()(
+  persist(
+    (set, get) => ({
+      // Initial state
+      currentUser: null,
+      currentRoom: null,
+      gameState: null,
+      selectedCard: null,
+      peekedCards: new Map(),
+      isMyTurn: false,
   
   // Actions
   setCurrentUser: (user) => set({ currentUser: user }),
@@ -116,14 +119,23 @@ const useGameStore = create<GameStore>((set, get) => ({
     return isMyTurn && gameState?.status === 'playing';
   },
   
-  reset: () => set({
-    currentUser: null,
-    currentRoom: null,
-    gameState: null,
-    selectedCard: null,
-    peekedCards: new Map(),
-    isMyTurn: false
-  })
-}));
+      reset: () => set({
+        currentUser: null,
+        currentRoom: null,
+        gameState: null,
+        selectedCard: null,
+        peekedCards: new Map(),
+        isMyTurn: false
+      })
+    }),
+    {
+      name: 'fever-game-storage',
+      partialize: (state) => ({
+        currentUser: state.currentUser,
+        currentRoom: state.currentRoom,
+      }),
+    }
+  )
+);
 
 export default useGameStore;
