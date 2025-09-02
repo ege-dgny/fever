@@ -164,6 +164,11 @@ const GameBoard: React.FC<GameBoardProps> = ({ gameState }) => {
     const { ability } = gameState.activeAbility;
 
     if (ability === 'peek-self') {
+      // Only allow peeking at your own cards
+      if (player.id !== currentUser.id) {
+        toast.error("Select one of your own cards.");
+        return;
+      }
       // Client-side peek for 5 seconds, then advance turn
       const cardKey = `${position.row}-${position.col}`;
       setPeekingPositions(prev => new Set(prev).add(cardKey));
