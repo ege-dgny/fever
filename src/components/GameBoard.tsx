@@ -185,10 +185,18 @@ const GameBoard: React.FC<GameBoardProps> = ({ gameState }) => {
     }
 
     if (ability === 'flip-opponent') {
-      GameService.executeAbility(gameState.id, ability, currentUser.id, {
-        opponentPlayerId: player.id,
-        opponentCardPosition: position,
-      });
+      (async () => {
+        try {
+          await GameService.executeAbility(gameState.id, ability, currentUser.id, {
+            opponentPlayerId: player.id,
+            opponentCardPosition: position,
+          });
+          toast.success('Card revealed');
+        } catch (e) {
+          console.error(e);
+          toast.error('Failed to apply ability');
+        }
+      })();
       return;
     }
 
@@ -213,17 +221,25 @@ const GameBoard: React.FC<GameBoardProps> = ({ gameState }) => {
         const opponentPosString = `${player.id}-${position.row}-${position.col}`;
         setSwappingPositions([ownPosString, opponentPosString]);
 
-        GameService.executeAbility(gameState.id, ability, currentUser.id, {
-          ...abilityTarget,
-          opponentPlayerId: player.id,
-          opponentCardPosition: position,
-        });
-
-        // Reset state after animation
-        setTimeout(() => {
-          setAbilityTarget({});
-          setSwappingPositions([]);
-        }, 1500);
+        (async () => {
+          try {
+            await GameService.executeAbility(gameState.id, ability, currentUser.id, {
+              ...abilityTarget,
+              opponentPlayerId: player.id,
+              opponentCardPosition: position,
+            });
+            toast.success('Cards swapped');
+          } catch (e) {
+            console.error(e);
+            toast.error('Failed to swap cards');
+          } finally {
+            // Reset state after animation
+            setTimeout(() => {
+              setAbilityTarget({});
+              setSwappingPositions([]);
+            }, 1500);
+          }
+        })();
       }
     }
   };
