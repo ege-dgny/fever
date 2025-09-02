@@ -54,6 +54,20 @@ const CardComponent: React.FC<CardProps> = ({
     }
   };
   
+  const getRankLabel = (card: CardType): string => {
+    if (card.rank === 'joker') return 'Joker';
+    if (typeof card.rank === 'string' && card.rank.length > 0) return card.rank;
+    const v = Number((card as any).value);
+    if (Number.isFinite(v)) {
+      if (v === -1) return 'Joker';
+      if (v === 0) return '10';
+      if (v === 1) return 'A';
+      if (v === 15) return 'K';
+      return String(v);
+    }
+    return '';
+  };
+  
   const hasAbility = card.specialAbility !== undefined;
   
   return (
@@ -70,12 +84,7 @@ const CardComponent: React.FC<CardProps> = ({
       {card.isFaceUp ? (
         <div className="h-full flex flex-col items-center justify-center p-2">
           <div className={`text-2xl font-bold ${getSuitColor(card.suit)}`}>
-            {(() => {
-              if (card.rank === 'joker') return 'Joker';
-              if (card.rank && typeof card.rank === 'string') return card.rank;
-              if (typeof (card as any).value === 'number') return String((card as any).value);
-              return '';
-            })()}
+            {getRankLabel(card)}
           </div>
           <div className={`text-3xl ${getSuitColor(card.suit)}`}>
             {getSuitSymbol(card.suit)}
@@ -100,9 +109,9 @@ const CardComponent: React.FC<CardProps> = ({
         <div className="absolute inset-0 bg-black/80 rounded-lg flex flex-col items-center justify-center text-white p-2">
           <div className="text-xs mb-1">Peeking</div>
           <div className={`text-lg font-bold ${getSuitColor(card.suit)}`}>
-            {card.rank === 'joker' ? 'Joker' : card.rank}{getSuitSymbol(card.suit)}
+            {getRankLabel(card)}{getSuitSymbol(card.suit)}
           </div>
-          <div className="text-xs mt-1">Value: {card.value}</div>
+          <div className="text-xs mt-1">Value: {typeof card.value === 'number' ? card.value : ''}</div>
         </div>
       )}
       
