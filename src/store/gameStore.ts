@@ -53,30 +53,34 @@ const useGameStore = create<GameStore>((set, get) => ({
   // Actions
   setCurrentUser: (user) => {
     set({ currentUser: user });
-    // Save to localStorage for session recovery
-    try {
-      if (user) {
-        localStorage.setItem('fever-current-user', JSON.stringify(user));
-      } else {
-        localStorage.removeItem('fever-current-user');
+    // Save to localStorage asynchronously to avoid blocking
+    setTimeout(() => {
+      try {
+        if (user) {
+          localStorage.setItem('fever-current-user', JSON.stringify(user));
+        } else {
+          localStorage.removeItem('fever-current-user');
+        }
+      } catch (error) {
+        console.error('Failed to save user to localStorage:', error);
       }
-    } catch (error) {
-      console.error('Failed to save user to localStorage:', error);
-    }
+    }, 0);
   },
   
   setCurrentRoom: (room) => {
     set({ currentRoom: room });
-    // Save to localStorage for session recovery
-    try {
-      if (room) {
-        localStorage.setItem('fever-current-room', JSON.stringify(room));
-      } else {
-        localStorage.removeItem('fever-current-room');
+    // Save to localStorage asynchronously to avoid blocking
+    setTimeout(() => {
+      try {
+        if (room) {
+          localStorage.setItem('fever-current-room', JSON.stringify(room));
+        } else {
+          localStorage.removeItem('fever-current-room');
+        }
+      } catch (error) {
+        console.error('Failed to save room to localStorage:', error);
       }
-    } catch (error) {
-      console.error('Failed to save room to localStorage:', error);
-    }
+    }, 0);
   },
   
   setGameState: (state) => {
