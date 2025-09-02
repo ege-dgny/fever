@@ -56,6 +56,12 @@ function reconstructPlayersHands2D(game: any): Player[] {
 function toFirestoreCard(c: any): any {
   if (!c) return null;
   
+  // Check if we're receiving a corrupted card
+  if (!c.id || !c.rank) {
+    console.error('CRITICAL: toFirestoreCard received corrupted card:', c);
+    console.trace('Stack trace for corrupted card');
+  }
+  
   // Preserve original card properties - don't override them
   const originalRank = c.rank;
   const originalValue = c.value;
@@ -80,7 +86,7 @@ function toFirestoreCard(c: any): any {
     else finalRank = String(finalValue);
   }
   
-  return {
+  const result = {
     id: originalId,
     suit: originalSuit ?? null,
     rank: finalRank,
@@ -88,6 +94,13 @@ function toFirestoreCard(c: any): any {
     isFaceUp: !!c.isFaceUp,
     specialAbility: c.specialAbility
   };
+  
+  // Log result to see what we're actually writing to Firestore
+  if (!result.id || !result.rank) {
+    console.error('CRITICAL: About to write corrupted card to Firestore:', result);
+  }
+  
+  return result;
 }
 
 // Helper: flatten 2D hands back for Firestore
@@ -144,6 +157,20 @@ function cleanForFirestore(obj: any): any {
 
 function normalizeCard(c: any): Card {
   if (!c) return c;
+  
+  // If card is missing critical properties, it's corrupted - reject it
+  if (!c.id || !c.rank) {
+    console.error('CRITICAL: normalizeCard received corrupted card missing id/rank:', c);
+    // Return a placeholder to prevent crashes, but this shouldn't happen
+    return {
+      id: 'corrupted-' + Math.random(),
+      rank: 'A', // Use a valid rank to prevent TypeScript errors
+      suit: null,
+      value: 0,
+      isFaceUp: !!c.isFaceUp,
+      specialAbility: undefined
+    } as Card;
+  }
   
   // Preserve original properties, only fill in missing ones
   const normalized = { ...c };
