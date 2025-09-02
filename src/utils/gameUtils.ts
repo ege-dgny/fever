@@ -38,7 +38,8 @@ export function getCardValue(rank: Rank): number {
     case '10': return 0;
     case 'J':
     case 'Q':
-    case 'K': return 15;
+    case 'K': 
+      return 15;
     default: return parseInt(rank);
   }
 }

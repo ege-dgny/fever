@@ -357,7 +357,20 @@ export class GameService {
           player.cards.forEach((item: any) => {
             if (item && item.row !== undefined && item.col !== undefined) {
               const c = item.card || null;
-              cards[item.row][item.col] = c ? normalizeCard({ ...c }) : c;
+              if (c) {
+                console.log('Firestore card debug:', {
+                  id: c.id,
+                  rank: c.rank,
+                  value: c.value,
+                  suit: c.suit,
+                  beforeNormalize: c
+                });
+                const normalized = normalizeCard({ ...c });
+                console.log('After normalize:', normalized);
+                cards[item.row][item.col] = normalized;
+              } else {
+                cards[item.row][item.col] = c;
+              }
             }
           });
           
@@ -795,7 +808,16 @@ export class GameService {
         game.players.forEach((player) => {
           player.cards.forEach((row) => {
             row.forEach((card) => {
-              if (card) card.isFaceUp = true;
+              if (card) {
+                card.isFaceUp = true;
+                // Debug logging
+                console.log('End game card debug:', {
+                  id: card.id,
+                  rank: card.rank,
+                  value: card.value,
+                  suit: card.suit
+                });
+              }
             });
           });
           player.score = calculatePlayerScore(player.cards);
