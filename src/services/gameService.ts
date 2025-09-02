@@ -719,45 +719,44 @@ export class GameService {
   
   static async endGame(gameId: string): Promise<void> {
     const gameRef = doc(db, GAMES_COLLECTION, gameId);
-    const gameDoc = await getDoc(gameRef);
-    
-    if (!gameDoc.exists()) {
-      throw new Error('Game not found');
-    }
-    
-    const game = gameDoc.data() as GameState;
-    
-    // Calculate scores
-    game.players.forEach(player => {
-      // Reveal all cards
-      player.cards.forEach(row => {
-        row.forEach(card => {
-          if (card) card.isFaceUp = true;
+    try {
+      await runTransaction(db, async (transaction) => {
+        const gameDoc = await transaction.get(gameRef);
+        if (!gameDoc.exists()) {
+          throw new Error('Game not found');
+        }
+
+        const raw = gameDoc.data() as any;
+        const players2D = reconstructPlayersHands2D(raw);
+        const game = { ...raw, players: players2D } as GameState;
+
+        // Reveal all cards and calculate scores
+        game.players.forEach((player) => {
+          player.cards.forEach((row) => {
+            row.forEach((card) => {
+              if (card) card.isFaceUp = true;
+            });
+          });
+          player.score = calculatePlayerScore(player.cards);
         });
+
+        // Determine winner (lowest score)
+        const winner = game.players.reduce((prev, current) =>
+          prev.score < current.score ? prev : current
+        );
+
+        const firestorePlayers = flattenPlayersHandsForFirestore(game.players);
+
+        transaction.update(gameRef, cleanForFirestore({
+          players: firestorePlayers,
+          status: 'finished',
+          winner: winner.id,
+          updatedAt: serverTimestamp()
+        }));
       });
-      player.score = calculatePlayerScore(player.cards);
-    });
-    
-    // Determine winner (lowest score)
-    const winner = game.players.reduce((prev, current) => 
-      prev.score < current.score ? prev : current
-    );
-    
-    // Convert players array to Firestore-compatible format
-    const firestorePlayers = game.players.map(player => ({
-      ...player,
-      cards: player.cards.flat().map((card, index) => ({
-        card: card,
-        row: Math.floor(index / 3),
-        col: index % 3
-      }))
-    }));
-    
-    await updateDoc(gameRef, cleanForFirestore({
-      players: firestorePlayers,
-      status: 'finished',
-      winner: winner.id,
-      updatedAt: serverTimestamp()
-    }));
+    } catch (e) {
+      console.error('endGame failed:', e);
+      throw e;
+    }
   }
 }
