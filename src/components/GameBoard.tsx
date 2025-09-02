@@ -485,9 +485,9 @@ const GameBoard: React.FC<GameBoardProps> = ({ gameState }) => {
           {/* Other Players */}
           <div className="lg:col-span-2 space-y-4">
             <h2 className="text-white text-xl font-semibold">Opponents</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-flow-col auto-cols-[minmax(320px,1fr)] gap-4 overflow-x-auto pb-2">
               {otherPlayers.map(player => (
-                <div key={player.id}>
+                <div key={player.id} className="min-w-[320px]">
                   {renderPlayerArea(player)}
                 </div>
               ))}
@@ -556,17 +556,6 @@ const GameBoard: React.FC<GameBoardProps> = ({ gameState }) => {
                   </div>
                 )}
               </div>
-              
-              {/* Recall Button */}
-              {recallablePositions.length > 0 && (
-                <button
-                  onClick={handleRecallCards}
-                  className="w-full py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition flex items-center justify-center gap-2"
-                >
-                  <RefreshCw className="w-4 h-4" />
-                  Recall {recallablePositions.length} card(s)
-                </button>
-              )}
               
               {/* Stop Button */}
               {isMyTurn && gameState.status === 'playing' && !drawnCard && (
