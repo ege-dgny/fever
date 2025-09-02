@@ -1,5 +1,4 @@
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
 import type { Player, GameState, GameRoom } from '../types/game';
 
 interface GameStore {
@@ -42,21 +41,43 @@ interface GameStore {
   reset: () => void;
 }
 
-const useGameStore = create<GameStore>()(
-  persist(
-    (set, get) => ({
-      // Initial state
-      currentUser: null,
-      currentRoom: null,
-      gameState: null,
-      selectedCard: null,
-      peekedCards: new Map(),
-      isMyTurn: false,
+const useGameStore = create<GameStore>((set, get) => ({
+  // Initial state
+  currentUser: null,
+  currentRoom: null,
+  gameState: null,
+  selectedCard: null,
+  peekedCards: new Map(),
+  isMyTurn: false,
   
   // Actions
-  setCurrentUser: (user) => set({ currentUser: user }),
+  setCurrentUser: (user) => {
+    set({ currentUser: user });
+    // Save to localStorage for session recovery
+    try {
+      if (user) {
+        localStorage.setItem('fever-current-user', JSON.stringify(user));
+      } else {
+        localStorage.removeItem('fever-current-user');
+      }
+    } catch (error) {
+      console.error('Failed to save user to localStorage:', error);
+    }
+  },
   
-  setCurrentRoom: (room) => set({ currentRoom: room }),
+  setCurrentRoom: (room) => {
+    set({ currentRoom: room });
+    // Save to localStorage for session recovery
+    try {
+      if (room) {
+        localStorage.setItem('fever-current-room', JSON.stringify(room));
+      } else {
+        localStorage.removeItem('fever-current-room');
+      }
+    } catch (error) {
+      console.error('Failed to save room to localStorage:', error);
+    }
+  },
   
   setGameState: (state) => {
     const { currentUser } = get();
@@ -119,23 +140,14 @@ const useGameStore = create<GameStore>()(
     return isMyTurn && gameState?.status === 'playing';
   },
   
-      reset: () => set({
-        currentUser: null,
-        currentRoom: null,
-        gameState: null,
-        selectedCard: null,
-        peekedCards: new Map(),
-        isMyTurn: false
-      })
-    }),
-    {
-      name: 'fever-game-storage',
-      partialize: (state) => ({
-        currentUser: state.currentUser,
-        currentRoom: state.currentRoom,
-      }),
-    }
-  )
-);
+  reset: () => set({
+    currentUser: null,
+    currentRoom: null,
+    gameState: null,
+    selectedCard: null,
+    peekedCards: new Map(),
+    isMyTurn: false
+  })
+}));
 
 export default useGameStore;

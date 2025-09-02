@@ -8,14 +8,39 @@ export class SessionRecovery {
    * This includes reconnecting to their current room and game
    */
   static async recoverSession(): Promise<boolean> {
-    const { currentUser, currentRoom, setCurrentRoom, setGameState } = useGameStore.getState();
+    const { currentUser, setCurrentRoom, setGameState, setCurrentUser } = useGameStore.getState();
     
-    if (!currentUser) {
+    // Try to restore user from localStorage if not already set
+    let userToUse = currentUser;
+    if (!userToUse) {
+      try {
+        const savedUser = localStorage.getItem('fever-current-user');
+        if (savedUser) {
+          userToUse = JSON.parse(savedUser);
+          setCurrentUser(userToUse);
+        }
+      } catch (error) {
+        console.error('Failed to parse saved user:', error);
+      }
+    }
+    
+    // Try to get saved room from localStorage
+    let currentRoom = null;
+    try {
+      const savedRoom = localStorage.getItem('fever-current-room');
+      if (savedRoom) {
+        currentRoom = JSON.parse(savedRoom);
+      }
+    } catch (error) {
+      console.error('Failed to parse saved room:', error);
+    }
+    
+    if (!userToUse) {
       console.log('No user to recover session for');
       return false;
     }
 
-    console.log('Attempting to recover session for user:', currentUser.name);
+    console.log('Attempting to recover session for user:', userToUse.name);
 
     try {
       // If we have a room, try to reconnect to it
@@ -25,7 +50,7 @@ export class SessionRecovery {
         // Check if the room still exists and user is still a member
         const updatedRoom = await GameService.getRoomByCode(currentRoom.code);
         
-        if (updatedRoom && updatedRoom.playerIds.includes(currentUser.id)) {
+        if (updatedRoom && updatedRoom.playerIds.includes(userToUse.id)) {
           setCurrentRoom(updatedRoom);
           console.log('Successfully reconnected to room');
           
