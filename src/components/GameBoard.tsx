@@ -349,39 +349,7 @@ const GameBoard: React.FC<GameBoardProps> = ({ gameState }) => {
     }
   };
 
-  if (gameState.status === 'finished') {
-    const winner = gameState.players.find(p => p.id === gameState.winner);
-    
-    return (
-      <div className="min-h-screen p-4 flex items-center justify-center">
-        <div className="max-w-6xl mx-auto w-full">
-          <div className="bg-black/20 backdrop-blur-lg rounded-3xl p-8 text-center mb-6 border border-white/20">
-            <Trophy className="w-16 h-16 text-yellow-400 mx-auto mb-4" />
-            <h1 className="text-4xl font-bold text-white mb-2">Game Over!</h1>
-            <p className="text-2xl text-white/90">Winner: {winner?.name}</p>
-            <p className="text-xl text-white/70">Score: {winner?.score}</p>
-          </div>
-          
-          <div className="bg-black/20 backdrop-blur-lg rounded-3xl p-6 border border-white/20">
-            <h2 className="text-2xl font-bold text-white mb-4">Final Scores</h2>
-            <div className="space-y-3">
-              {gameState.players
-                .sort((a, b) => a.score - b.score)
-                .map((player, index) => (
-                  <div key={player.id} className="bg-white/10 rounded-lg p-4 flex justify-between items-center">
-                    <div className="flex items-center gap-3">
-                      <span className="text-2xl font-bold w-8 text-center">{index + 1}.</span>
-                      <span className="text-white font-semibold">{player.name}</span>
-                    </div>
-                    <span className="text-white text-xl">{player.score} points</span>
-                  </div>
-                ))}
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
+  // Inline finished-state UI additions will be rendered below
   
   return (
     <div className="min-h-screen p-4">
@@ -408,6 +376,22 @@ const GameBoard: React.FC<GameBoardProps> = ({ gameState }) => {
             <HelpCircle className="w-5 h-5 text-white" />
           </button>
         </div>
+
+        {/* Finished Banner */}
+        {gameState.status === 'finished' && (
+          <div className="bg-black/20 backdrop-blur-lg rounded-2xl p-4 mb-4 border border-white/20 text-center">
+            <div className="flex items-center justify-center gap-3">
+              <Trophy className="w-6 h-6 text-yellow-400" />
+              <p className="text-white font-semibold">Game Over</p>
+            </div>
+            {(() => {
+              const win = gameState.players.find(p => p.id === gameState.winner);
+              return (
+                <p className="text-white/90 mt-1">Winner: <span className="font-semibold">{win?.name}</span> ({win?.score} points)</p>
+              );
+            })()}
+          </div>
+        )}
         
         {/* Help Section */}
         {showHelp && (
@@ -574,6 +558,27 @@ const GameBoard: React.FC<GameBoardProps> = ({ gameState }) => {
           </div>
         </div>
         
+        {/* Final Scores inline */}
+        {gameState.status === 'finished' && (
+          <div className="bg-black/20 backdrop-blur-lg rounded-2xl p-4 border border-white/20">
+            <h2 className="text-white text-xl font-semibold mb-3">Final Scores</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
+              {gameState.players
+                .slice()
+                .sort((a, b) => a.score - b.score)
+                .map((player, index) => (
+                  <div key={player.id} className="bg-white/10 rounded-lg p-3 flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <span className="text-white/80 font-bold w-6 text-center">{index + 1}</span>
+                      <span className="text-white font-semibold">{player.name}</span>
+                    </div>
+                    <span className="text-white">{player.score}</span>
+                  </div>
+                ))}
+            </div>
+          </div>
+        )}
+
         {/* Current Player Area */}
         {myPlayer && (
           <div>
