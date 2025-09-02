@@ -16,7 +16,7 @@ import {
 } from 'firebase/firestore';
 import { db } from '../config/firebase';
 import type { GameState, GameRoom, Player, GameMode, Card, SpecialAbility } from '../types/game';
-import { createDeck, dealCards, generateRoomCode, calculatePlayerScore } from '../utils/gameUtils';
+import { createDeck, dealCards, generateRoomCode, calculatePlayerScore, getCardValue } from '../utils/gameUtils';
 import { v4 as uuidv4 } from 'uuid';
 
 // Helper: reconstruct players' hands from flattened Firestore representation to 2D arrays
@@ -24,15 +24,25 @@ function reconstructPlayersHands2D(game: any): Player[] {
   const rows = Math.max(1, Math.floor((game.gameMode || 6) / 3));
   return (game.players as any[]).map((player: any) => {
     const cards2D: (Card | null)[][] = Array.from({ length: rows }, () => [null, null, null]);
-    // If already 2D, return as-is
+    // If already 2D, ensure values exist and return
     if (Array.isArray(player.cards) && Array.isArray(player.cards[0])) {
-      return player as Player;
+      const fixed = (player.cards as (Card | null)[][]).map(r => r.map(c => {
+        if (c && (c as any).value == null && (c as any).rank) {
+          (c as any).value = getCardValue((c as any).rank);
+        }
+        return c;
+      }));
+      return { ...player, cards: fixed } as Player;
     }
     // Flattened form: array of { card, row, col }
     if (Array.isArray(player.cards)) {
       player.cards.forEach((item: any) => {
         if (item && item.row !== undefined && item.col !== undefined) {
-          cards2D[item.row][item.col] = item.card || null;
+          const c = item.card || null;
+          if (c && c.value == null && c.rank) {
+            c.value = getCardValue(c.rank);
+          }
+          cards2D[item.row][item.col] = c;
         }
       });
     }
@@ -296,7 +306,11 @@ export class GameService {
           // Place cards back in their positions
           player.cards.forEach((item: any) => {
             if (item && item.row !== undefined && item.col !== undefined) {
-              cards[item.row][item.col] = item.card || null;
+              const c = item.card || null;
+              if (c && (c as any).value == null && (c as any).rank) {
+                (c as any).value = getCardValue((c as any).rank);
+              }
+              cards[item.row][item.col] = c;
             }
           });
           
