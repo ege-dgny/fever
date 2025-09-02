@@ -7,6 +7,7 @@ import toast from 'react-hot-toast';
 import { useFirebaseStatus } from '../hooks/useFirebaseStatus';
 import { PlayerService } from '../services/playerService';
 import { GameService } from '../services/gameService';
+import { SessionRecovery } from '../utils/sessionRecovery';
 
 const Auth: React.FC = () => {
   const [playerName, setPlayerName] = useState('');
@@ -83,6 +84,23 @@ const Auth: React.FC = () => {
     }
   };
 
+  const handleRestoreSession = async () => {
+    setIsLoading(true);
+    try {
+      const recovered = await SessionRecovery.recoverSession();
+      if (recovered) {
+        toast.success('Session restored successfully!');
+      } else {
+        toast.error('No previous session found');
+      }
+    } catch (error) {
+      console.error('Session recovery failed:', error);
+      toast.error('Failed to restore session');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return (
     <div className="min-h-screen flex items-center justify-center p-4">
       <div className="bg-black/20 backdrop-blur-lg rounded-3xl shadow-2xl p-8 w-full max-w-md border border-white/20">
@@ -119,6 +137,16 @@ const Auth: React.FC = () => {
             {isLoading ? 'Signing in...' : 'Start Playing'}
           </button>
         </form>
+        
+        <div className="mt-4 text-center">
+          <button
+            onClick={handleRestoreSession}
+            disabled={isLoading}
+            className="w-full py-2 px-4 bg-white/20 hover:bg-white/30 text-white/90 font-medium rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {isLoading ? 'Restoring...' : 'Restore Previous Game'}
+          </button>
+        </div>
         
         <div className="mt-8 text-center text-white/60 text-sm">
           <p> </p>

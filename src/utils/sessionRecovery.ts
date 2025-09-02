@@ -115,15 +115,11 @@ export class SessionRecovery {
       // Keep the connection alive but could reduce frequency if needed
     } else {
       console.log('Page visible - ensuring full sync');
-      // Ensure we're fully synced when user returns
-      this.recoverSession();
+      // Don't automatically recover session on visibility change
+      // This was causing infinite loops
     }
   }
 }
 
-// Set up visibility change listener
-if (typeof document !== 'undefined') {
-  document.addEventListener('visibilitychange', () => {
-    SessionRecovery.handleVisibilityChange();
-  });
-}
+// Visibility change listener removed to prevent infinite loops
+// Session recovery is now handled manually when needed

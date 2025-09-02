@@ -27,12 +27,7 @@ function GameApp() {
           email: user.email || `${user.uid}@anonymous.com`
         });
         
-        // Attempt session recovery after user is authenticated
-        try {
-          await SessionRecovery.recoverSession();
-        } catch (error) {
-          console.error('Session recovery failed:', error);
-        }
+        // Session recovery is now handled manually when needed
       } else {
         setCurrentUser(null);
         // Clean up any active subscriptions
