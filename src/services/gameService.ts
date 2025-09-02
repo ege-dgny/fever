@@ -31,18 +31,10 @@ function reconstructPlayersHands2D(game: any): Player[] {
     }
     // Flattened form: array of { card, row, col }
     if (Array.isArray(player.cards)) {
-      player.cards.forEach((item: any, index: number) => {
+      player.cards.forEach((item: any) => {
         if (item && item.row !== undefined && item.col !== undefined) {
           const c = item.card || null;
-          if (index === 0) {
-            console.log('DEBUG: Reconstructing first card item:', item);
-            console.log('DEBUG: Extracted card c:', c);
-          }
-          const normalized = c ? normalizeCard({ ...c }) : c;
-          if (index === 0) {
-            console.log('DEBUG: Normalized card:', normalized);
-          }
-          cards2D[item.row][item.col] = normalized;
+          cards2D[item.row][item.col] = c ? normalizeCard({ ...c }) : c;
         }
       });
     }
@@ -56,10 +48,9 @@ function reconstructPlayersHands2D(game: any): Player[] {
 function toFirestoreCard(c: any): any {
   if (!c) return null;
   
-  // Check if we're receiving a corrupted card
-  if (!c.id || !c.rank) {
+  // Check if we're receiving a corrupted card (only log in development)
+  if ((!c.id || !c.rank) && process.env.NODE_ENV === 'development') {
     console.error('CRITICAL: toFirestoreCard received corrupted card:', c);
-    console.trace('Stack trace for corrupted card');
   }
   
   // Preserve original card properties - don't override them
@@ -95,8 +86,8 @@ function toFirestoreCard(c: any): any {
     specialAbility: c.specialAbility
   };
   
-  // Log result to see what we're actually writing to Firestore
-  if (!result.id || !result.rank) {
+  // Log result in development only
+  if ((!result.id || !result.rank) && process.env.NODE_ENV === 'development') {
     console.error('CRITICAL: About to write corrupted card to Firestore:', result);
   }
   
@@ -108,9 +99,11 @@ function flattenPlayersHandsForFirestore(players: Player[]): any[] {
   return players.map(player => ({
     ...player,
     cards: player.cards.flat().map((card, index) => {
-      // Debug: Check if we're getting metadata objects instead of cards
+      // Check if we're getting metadata objects instead of cards (development only)
       if (card && typeof card === 'object' && 'card' in card && 'row' in card && 'col' in card) {
-        console.error('ERROR: Card in 2D array is metadata object, not actual card:', card);
+        if (process.env.NODE_ENV === 'development') {
+          console.error('ERROR: Card in 2D array is metadata object, not actual card:', card);
+        }
         // Extract the actual card from the metadata
         return {
           card: toFirestoreCard(card.card),
@@ -160,7 +153,9 @@ function normalizeCard(c: any): Card {
   
   // If card is missing critical properties, it's corrupted - reject it
   if (!c.id || !c.rank) {
-    console.error('CRITICAL: normalizeCard received corrupted card missing id/rank:', c);
+    if (process.env.NODE_ENV === 'development') {
+      console.error('CRITICAL: normalizeCard received corrupted card missing id/rank:', c);
+    }
     // Return a placeholder to prevent crashes, but this shouldn't happen
     return {
       id: 'corrupted-' + Math.random(),
@@ -790,7 +785,11 @@ export class GameService {
       throw new Error('Game not found');
     }
     
-    const game = gameDoc.data() as GameState;
+    const rawGame = gameDoc.data() as any;
+    // Properly reconstruct 2D arrays from Firestore data
+    const players2D = reconstructPlayersHands2D(rawGame);
+    const game = { ...rawGame, players: players2D } as GameState;
+    
     const playerIndex = game.players.findIndex(p => p.id === playerId);
     
     if (playerIndex === -1) {
@@ -800,15 +799,8 @@ export class GameService {
     game.players[playerIndex].hasCalledStop = true;
     game.status = 'ending';
     
-    // Convert players array to Firestore-compatible format
-    const firestorePlayers = game.players.map(player => ({
-      ...player,
-      cards: player.cards.flat().map((card, index) => ({
-        card: toFirestoreCard(card),
-        row: Math.floor(index / 3),
-        col: index % 3
-      }))
-    }));
+    // Use the flattenPlayersHandsForFirestore helper to properly convert 2D arrays
+    const firestorePlayers = flattenPlayersHandsForFirestore(game.players);
     
     await updateDoc(gameRef, cleanForFirestore({
       players: firestorePlayers,
@@ -837,29 +829,18 @@ export class GameService {
         }
 
         const raw = gameDoc.data() as any;
-        console.log('DEBUG: Raw Firestore data in endGame:', raw.players?.[0]?.cards?.slice(0, 3));
-        
         const players2D = reconstructPlayersHands2D(raw);
-        console.log('DEBUG: After reconstruction, first player cards:', players2D?.[0]?.cards?.[0]?.slice(0, 3));
-        
         const game = { ...raw, players: players2D } as GameState;
 
         // Reveal all cards and calculate scores
-        game.players.forEach((player, playerIndex) => {
-          player.cards.forEach((row, rowIndex) => {
-            row.forEach((card, colIndex) => {
-              if (card) {
-                card.isFaceUp = true;
-                if (playerIndex === 0 && rowIndex === 0 && colIndex === 0) {
-                  console.log('DEBUG: First card before flatten:', card);
-                }
-              }
+        game.players.forEach((player) => {
+          player.cards.forEach((row) => {
+            row.forEach((card) => {
+              if (card) card.isFaceUp = true;
             });
           });
           player.score = calculatePlayerScore(player.cards);
         });
-        
-        console.log('DEBUG: About to flatten players, first player cards:', game.players?.[0]?.cards?.[0]?.slice(0, 3));
 
         // Determine winner (lowest score)
         const winner = game.players.reduce((prev, current) =>
