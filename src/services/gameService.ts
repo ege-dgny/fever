@@ -15,7 +15,7 @@ import {
   runTransaction
 } from 'firebase/firestore';
 import { db } from '../config/firebase';
-import type { GameState, GameRoom, Player, GameMode, Card, SpecialAbility } from '../types/game';
+import type { GameState, GameRoom, Player, GameMode, Card, SpecialAbility, Rank } from '../types/game';
 import { createDeck, dealCards, generateRoomCode, calculatePlayerScore, getCardValue } from '../utils/gameUtils';
 import { v4 as uuidv4 } from 'uuid';
 
