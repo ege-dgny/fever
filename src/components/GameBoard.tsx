@@ -72,8 +72,13 @@ const GameBoard: React.FC<GameBoardProps> = ({ gameState }) => {
       
       // Cleanup on unmount or status change
       return () => clearInterval(interval);
+    } else if (gameState.status === 'playing') {
+      // Ensure peek mode is disabled when game starts playing
+      setPeekingPositions(new Set());
+      setIsPeeking(false);
+      setPeekTimeRemaining(0);
     }
-  }, [gameState.status]);
+  }, [gameState.status, myPlayer]);
   
   // Check for recallable cards when discard pile changes
   useEffect(() => {
