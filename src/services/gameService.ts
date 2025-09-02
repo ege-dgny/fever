@@ -47,23 +47,35 @@ function reconstructPlayersHands2D(game: any): Player[] {
 
 function toFirestoreCard(c: any): any {
   if (!c) return null;
-  let rank = c.rank as any;
-  let v = Number(c.value);
-  if (!Number.isFinite(v)) {
-    if (rank) v = getCardValue(rank as Rank);
+  
+  // Preserve original card properties - don't override them
+  const originalRank = c.rank;
+  const originalValue = c.value;
+  const originalSuit = c.suit;
+  
+  // Only compute missing values, don't override existing ones
+  let finalRank = originalRank;
+  let finalValue = Number(originalValue);
+  
+  // If value is missing but rank exists, compute value from rank
+  if (!Number.isFinite(finalValue) && finalRank) {
+    finalValue = getCardValue(finalRank as Rank);
   }
-  if (!rank && Number.isFinite(v)) {
-    if (v === -1) rank = 'joker';
-    else if (v === 0) rank = '10';
-    else if (v === 1) rank = 'A';
-    else if (v === 15) rank = 'K';
-    else rank = String(v);
+  
+  // If rank is missing but value exists, compute rank from value (fallback only)
+  if (!finalRank && Number.isFinite(finalValue)) {
+    if (finalValue === -1) finalRank = 'joker';
+    else if (finalValue === 0) finalRank = '10';
+    else if (finalValue === 1) finalRank = 'A';
+    else if (finalValue === 15) finalRank = 'K';
+    else finalRank = String(finalValue);
   }
+  
   return {
     id: c.id,
-    suit: c.suit ?? null,
-    rank,
-    value: Number.isFinite(v) ? v : (rank ? getCardValue(rank as Rank) : 0),
+    suit: originalSuit ?? null,
+    rank: finalRank,
+    value: Number.isFinite(finalValue) ? finalValue : (finalRank ? getCardValue(finalRank as Rank) : 0),
     isFaceUp: !!c.isFaceUp,
     specialAbility: c.specialAbility
   };
@@ -110,12 +122,23 @@ function cleanForFirestore(obj: any): any {
 
 function normalizeCard(c: any): Card {
   if (!c) return c;
-  if (c.value == null && c.rank) {
-    c.value = getCardValue(c.rank);
+  
+  // Preserve original properties, only fill in missing ones
+  const normalized = { ...c };
+  
+  // Ensure value is a number, but don't override if already set
+  if (typeof normalized.value !== 'number' || !Number.isFinite(normalized.value)) {
+    if (normalized.rank) {
+      normalized.value = getCardValue(normalized.rank);
+    } else {
+      normalized.value = 0; // fallback
+    }
   }
-  c.value = Number(c.value);
-  c.isFaceUp = !!c.isFaceUp;
-  return c as Card;
+  
+  // Ensure isFaceUp is boolean
+  normalized.isFaceUp = !!normalized.isFaceUp;
+  
+  return normalized as Card;
 }
 
 export class GameService {

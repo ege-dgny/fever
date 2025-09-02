@@ -55,17 +55,23 @@ const CardComponent: React.FC<CardProps> = ({
   };
   
   const getRankLabel = (card: CardType): string => {
-    if (card.rank === 'joker') return 'Joker';
-    if (typeof card.rank === 'string' && card.rank.length > 0) return card.rank; // prefer rank
+    // Always prefer the rank property if it exists
+    if (card.rank) {
+      return card.rank === 'joker' ? 'Joker' : String(card.rank);
+    }
+    
+    // Fallback to value if rank is missing
     const v = Number((card as any).value);
     if (Number.isFinite(v)) {
       if (v === -1) return 'Joker';
       if (v === 0) return '10';
       if (v === 1) return 'A';
       if (v === 15) return 'K';
-      return String(v);
+      if (v >= 2 && v <= 14) return String(v);
     }
-    return '';
+    
+    // Last resort fallback
+    return '?';
   };
   
   const hasAbility = card.specialAbility !== undefined;

@@ -131,16 +131,18 @@ export function calculatePlayerScore(cards: (Card | null)[][]): number {
   for (const row of cards) {
     for (const card of row) {
       if (card) {
-        let v = Number((card as any).value);
-        if (!Number.isFinite(v)) {
-          if ((card as any).rank) {
-            v = getCardValue((card as any).rank as Rank);
-          } else {
-            v = 0;
-          }
-          (card as any).value = v;
+        let cardValue = 0;
+        
+        // First try to use the existing value if it's valid
+        if (typeof card.value === 'number' && Number.isFinite(card.value)) {
+          cardValue = card.value;
+        } 
+        // Otherwise calculate from rank
+        else if (card.rank) {
+          cardValue = getCardValue(card.rank as Rank);
         }
-        score += v;
+        
+        score += cardValue;
       }
     }
   }
