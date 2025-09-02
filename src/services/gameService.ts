@@ -31,10 +31,18 @@ function reconstructPlayersHands2D(game: any): Player[] {
     }
     // Flattened form: array of { card, row, col }
     if (Array.isArray(player.cards)) {
-      player.cards.forEach((item: any) => {
+      player.cards.forEach((item: any, index: number) => {
         if (item && item.row !== undefined && item.col !== undefined) {
           const c = item.card || null;
-          cards2D[item.row][item.col] = c ? normalizeCard({ ...c }) : c;
+          if (index === 0) {
+            console.log('DEBUG: Reconstructing first card item:', item);
+            console.log('DEBUG: Extracted card c:', c);
+          }
+          const normalized = c ? normalizeCard({ ...c }) : c;
+          if (index === 0) {
+            console.log('DEBUG: Normalized card:', normalized);
+          }
+          cards2D[item.row][item.col] = normalized;
         }
       });
     }
@@ -802,18 +810,29 @@ export class GameService {
         }
 
         const raw = gameDoc.data() as any;
+        console.log('DEBUG: Raw Firestore data in endGame:', raw.players?.[0]?.cards?.slice(0, 3));
+        
         const players2D = reconstructPlayersHands2D(raw);
+        console.log('DEBUG: After reconstruction, first player cards:', players2D?.[0]?.cards?.[0]?.slice(0, 3));
+        
         const game = { ...raw, players: players2D } as GameState;
 
         // Reveal all cards and calculate scores
-        game.players.forEach((player) => {
-          player.cards.forEach((row) => {
-            row.forEach((card) => {
-              if (card) card.isFaceUp = true;
+        game.players.forEach((player, playerIndex) => {
+          player.cards.forEach((row, rowIndex) => {
+            row.forEach((card, colIndex) => {
+              if (card) {
+                card.isFaceUp = true;
+                if (playerIndex === 0 && rowIndex === 0 && colIndex === 0) {
+                  console.log('DEBUG: First card before flatten:', card);
+                }
+              }
             });
           });
           player.score = calculatePlayerScore(player.cards);
         });
+        
+        console.log('DEBUG: About to flatten players, first player cards:', game.players?.[0]?.cards?.[0]?.slice(0, 3));
 
         // Determine winner (lowest score)
         const winner = game.players.reduce((prev, current) =>
