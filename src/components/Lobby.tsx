@@ -110,6 +110,24 @@ const Lobby: React.FC = () => {
       toast.error('Failed to leave room');
     }
   };
+
+  const handleStartGame = async () => {
+    if (!currentRoom || !currentUser) return;
+    
+    try {
+      const players = roomPlayers.map(p => ({
+        id: p.id,
+        name: p.name,
+        email: p.email
+      }));
+      
+      await GameService.startGame(currentRoom, players);
+      toast.success('Game started!');
+    } catch (error) {
+      console.error('Error starting game:', error);
+      toast.error('Failed to start game');
+    }
+  };
   
   if (currentRoom) {
     return (
@@ -175,6 +193,7 @@ const Lobby: React.FC = () => {
           {currentUser?.id === currentRoom.hostId && currentRoom.playerIds.length >= 2 && (
             <button
               id="start-game-button"
+              onClick={handleStartGame}
               className="w-full mt-6 py-3 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white font-semibold rounded-xl shadow-lg transform transition hover:scale-105"
             >
               Start Game

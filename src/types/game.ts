@@ -33,6 +33,7 @@ export type GameStatus = 'waiting' | 'starting' | 'playing' | 'awaiting-ability-
 
 export interface GameState {
   id: string;
+  roomId: string;
   roomCode: string;
   players: Player[];
   currentPlayerIndex: number;

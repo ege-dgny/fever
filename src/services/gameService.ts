@@ -280,9 +280,31 @@ export class GameService {
       await updateDoc(roomRef, {
         playerIds: arrayRemove(playerId)
       });
-    }
+        }
   }
-  
+
+  static async updateRoomGameMode(roomId: string, newGameMode: GameMode): Promise<void> {
+    const roomRef = doc(db, ROOMS_COLLECTION, roomId);
+    await updateDoc(roomRef, {
+      gameMode: newGameMode,
+      updatedAt: serverTimestamp()
+    });
+  }
+
+  static async resetRoomForNewGame(roomId: string): Promise<void> {
+    const roomRef = doc(db, ROOMS_COLLECTION, roomId);
+    
+    // Reset room status and clear any previous game
+    await updateDoc(roomRef, cleanForFirestore({
+      status: 'waiting',
+      gameId: null,
+      updatedAt: serverTimestamp()
+    }));
+
+    // Note: The old game document will remain in Firestore for history
+    // but won't be referenced by the room anymore
+  }
+   
   static subscribeToRoom(roomId: string, callback: (room: GameRoom | null) => void): () => void {
     const roomRef = doc(db, ROOMS_COLLECTION, roomId);
     
@@ -338,6 +360,7 @@ export class GameService {
     
     const gameState: GameState = {
       id: gameId,
+      roomId: room.id,
       roomCode: room.code,
       players: gamePlayers,
       currentPlayerIndex: 0,
@@ -354,6 +377,7 @@ export class GameService {
     // Convert nested arrays to a Firestore-compatible format
     const firestoreGameState = {
       id: gameState.id,
+      roomId: gameState.roomId,
       roomCode: gameState.roomCode,
       players: gameState.players.map(player => ({
         ...player,
@@ -437,6 +461,7 @@ export class GameService {
         
         const game: GameState = {
           id: docSnap.id,
+          roomId: data.roomId,
           roomCode: data.roomCode,
           players,
           currentPlayerIndex: data.currentPlayerIndex,

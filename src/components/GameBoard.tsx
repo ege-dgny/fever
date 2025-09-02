@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import type { GameState, Card as CardType, Player, SpecialAbility } from '../types/game';
+import type { GameState, Card as CardType, Player, SpecialAbility, GameMode } from '../types/game';
 import CardComponent from './Card';
 import useGameStore from '../store/gameStore';
 import { GameService } from '../services/gameService';
@@ -10,7 +10,9 @@ import {
   Trash2,
   Clock,
   Trophy,
-  HelpCircle
+  HelpCircle,
+  RotateCcw,
+  Settings
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { canRecallCard } from '../utils/gameUtils';
@@ -567,7 +569,7 @@ const GameBoard: React.FC<GameBoardProps> = ({ gameState }) => {
         {gameState.status === 'finished' && (
           <div className="bg-black/20 backdrop-blur-lg rounded-2xl p-4 border border-white/20">
             <h2 className="text-white text-xl font-semibold mb-3">Final Scores</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3 mb-4">
               {gameState.players
                 .slice()
                 .sort((a, b) => a.score - b.score)
@@ -581,6 +583,11 @@ const GameBoard: React.FC<GameBoardProps> = ({ gameState }) => {
                   </div>
                 ))}
             </div>
+            
+            {/* Replay Options - Only show to host */}
+            {currentUser && gameState.roomId && (
+              <ReplaySection roomId={gameState.roomId} currentUserId={currentUser.id} />
+            )}
           </div>
         )}
 
@@ -592,6 +599,134 @@ const GameBoard: React.FC<GameBoardProps> = ({ gameState }) => {
           </div>
         )}
       </div>
+    </div>
+  );
+};
+
+// Replay Section Component
+interface ReplaySectionProps {
+  roomId: string;
+  currentUserId: string;
+}
+
+const ReplaySection: React.FC<ReplaySectionProps> = ({ roomId, currentUserId }) => {
+  const [selectedGameMode, setSelectedGameMode] = useState<GameMode>(6);
+  const [isLoading, setIsLoading] = useState(false);
+  const [showGameModeSelector, setShowGameModeSelector] = useState(false);
+  const { currentRoom } = useGameStore();
+  
+  const gameModes: GameMode[] = [6, 9, 12, 15, 18, 21, 24, 27, 30];
+  
+  // Check if current user is the host
+  const isHost = currentRoom?.hostId === currentUserId;
+  
+  const handleReplayWithSameMode = async () => {
+    if (!currentRoom) return;
+    
+    setIsLoading(true);
+    try {
+      await GameService.resetRoomForNewGame(roomId);
+      toast.success('Room reset! Ready for a new game.');
+    } catch (error) {
+      console.error('Error resetting room:', error);
+      toast.error('Failed to reset room');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+  
+  const handleReplayWithNewMode = async () => {
+    setIsLoading(true);
+    try {
+      await GameService.updateRoomGameMode(roomId, selectedGameMode);
+      await GameService.resetRoomForNewGame(roomId);
+      toast.success(`Room reset with ${selectedGameMode} cards! Ready for a new game.`);
+      setShowGameModeSelector(false);
+    } catch (error) {
+      console.error('Error updating room:', error);
+      toast.error('Failed to update room settings');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+  
+  if (!isHost) {
+    return (
+      <div className="text-center text-white/70 text-sm">
+        Waiting for host to start a new game...
+      </div>
+    );
+  }
+  
+  return (
+    <div className="border-t border-white/20 pt-4">
+      <h3 className="text-white font-semibold mb-3">Play Again?</h3>
+      
+      {!showGameModeSelector ? (
+        <div className="flex flex-col sm:flex-row gap-2">
+          <button
+            onClick={handleReplayWithSameMode}
+            disabled={isLoading}
+            className="flex-1 py-2 bg-green-600 hover:bg-green-700 disabled:bg-green-800 text-white rounded-lg transition flex items-center justify-center gap-2"
+          >
+            <RotateCcw className="w-4 h-4" />
+            Same Mode ({currentRoom?.gameMode} cards)
+          </button>
+          
+          <button
+            onClick={() => setShowGameModeSelector(true)}
+            disabled={isLoading}
+            className="flex-1 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-800 text-white rounded-lg transition flex items-center justify-center gap-2"
+          >
+            <Settings className="w-4 h-4" />
+            Change Mode
+          </button>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          <div>
+            <label className="block text-white/90 text-sm font-medium mb-2">
+              Select number of cards:
+            </label>
+            <div className="grid grid-cols-3 gap-2">
+              {gameModes.map((mode) => (
+                <button
+                  key={mode}
+                  onClick={() => setSelectedGameMode(mode)}
+                  className={`
+                    py-2 px-3 rounded-lg text-sm font-medium transition
+                    ${selectedGameMode === mode
+                      ? 'bg-orange-600 text-white'
+                      : 'bg-white/20 text-white/80 hover:bg-white/30'
+                    }
+                  `}
+                >
+                  {mode}
+                </button>
+              ))}
+            </div>
+          </div>
+          
+          <div className="flex gap-2">
+            <button
+              onClick={() => setShowGameModeSelector(false)}
+              disabled={isLoading}
+              className="flex-1 py-2 bg-gray-600 hover:bg-gray-700 disabled:bg-gray-800 text-white rounded-lg transition"
+            >
+              Cancel
+            </button>
+            
+            <button
+              onClick={handleReplayWithNewMode}
+              disabled={isLoading}
+              className="flex-1 py-2 bg-green-600 hover:bg-green-700 disabled:bg-green-800 text-white rounded-lg transition flex items-center justify-center gap-2"
+            >
+              <RotateCcw className="w-4 h-4" />
+              Start New Game
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
