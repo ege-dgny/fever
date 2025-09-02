@@ -26,16 +26,7 @@ function reconstructPlayersHands2D(game: any): Player[] {
     const cards2D: (Card | null)[][] = Array.from({ length: rows }, () => [null, null, null]);
     // If already 2D, ensure values exist and return
     if (Array.isArray(player.cards) && Array.isArray(player.cards[0])) {
-      const fixed = (player.cards as (Card | null)[][]).map(r => r.map(c => {
-        if (c) {
-          if ((c as any).value == null && (c as any).rank) {
-            (c as any).value = getCardValue((c as any).rank);
-          }
-          (c as any).value = Number((c as any).value);
-          (c as any).isFaceUp = !!(c as any).isFaceUp;
-        }
-        return c;
-      }));
+      const fixed = (player.cards as (Card | null)[][]).map(r => r.map(c => (c ? normalizeCard({ ...c }) : c)));
       return { ...player, cards: fixed } as Player;
     }
     // Flattened form: array of { card, row, col }
@@ -43,14 +34,7 @@ function reconstructPlayersHands2D(game: any): Player[] {
       player.cards.forEach((item: any) => {
         if (item && item.row !== undefined && item.col !== undefined) {
           const c = item.card || null;
-          if (c) {
-            if ((c as any).value == null && (c as any).rank) {
-              (c as any).value = getCardValue((c as any).rank);
-            }
-            (c as any).value = Number((c as any).value);
-            (c as any).isFaceUp = !!(c as any).isFaceUp;
-          }
-          cards2D[item.row][item.col] = c;
+          cards2D[item.row][item.col] = c ? normalizeCard({ ...c }) : c;
         }
       });
     }
@@ -98,6 +82,16 @@ function cleanForFirestore(obj: any): any {
   }
   
   return obj;
+}
+
+function normalizeCard(c: any): Card {
+  if (!c) return c;
+  if (c.value == null && c.rank) {
+    c.value = getCardValue(c.rank);
+  }
+  c.value = Number(c.value);
+  c.isFaceUp = !!c.isFaceUp;
+  return c as Card;
 }
 
 export class GameService {
@@ -224,6 +218,7 @@ export class GameService {
     // Assign cards to players
     gamePlayers.forEach(player => {
       player.cards = playerHands.get(player.id) || [];
+      player.cards = player.cards.map(r => r.map(c => (c ? normalizeCard({ ...c }) : c)));
     });
     
     const gameState: GameState = {
@@ -315,14 +310,7 @@ export class GameService {
           player.cards.forEach((item: any) => {
             if (item && item.row !== undefined && item.col !== undefined) {
               const c = item.card || null;
-              if (c) {
-                if ((c as any).value == null && (c as any).rank) {
-                  (c as any).value = getCardValue((c as any).rank);
-                }
-                (c as any).value = Number((c as any).value);
-                (c as any).isFaceUp = !!(c as any).isFaceUp;
-              }
-              cards[item.row][item.col] = c;
+              cards[item.row][item.col] = c ? normalizeCard({ ...c }) : c;
             }
           });
           

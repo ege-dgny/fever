@@ -131,7 +131,16 @@ export function calculatePlayerScore(cards: (Card | null)[][]): number {
   for (const row of cards) {
     for (const card of row) {
       if (card) {
-        score += card.value;
+        let v = Number((card as any).value);
+        if (!Number.isFinite(v)) {
+          if ((card as any).rank) {
+            v = getCardValue((card as any).rank as Rank);
+          } else {
+            v = 0;
+          }
+          (card as any).value = v;
+        }
+        score += v;
       }
     }
   }
