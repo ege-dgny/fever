@@ -45,12 +45,36 @@ function reconstructPlayersHands2D(game: any): Player[] {
   });
 }
 
+function toFirestoreCard(c: any): any {
+  if (!c) return null;
+  let rank = c.rank as any;
+  let v = Number(c.value);
+  if (!Number.isFinite(v)) {
+    if (rank) v = getCardValue(rank as Rank);
+  }
+  if (!rank && Number.isFinite(v)) {
+    if (v === -1) rank = 'joker';
+    else if (v === 0) rank = '10';
+    else if (v === 1) rank = 'A';
+    else if (v === 15) rank = 'K';
+    else rank = String(v);
+  }
+  return {
+    id: c.id,
+    suit: c.suit ?? null,
+    rank,
+    value: Number.isFinite(v) ? v : (rank ? getCardValue(rank as Rank) : 0),
+    isFaceUp: !!c.isFaceUp,
+    specialAbility: c.specialAbility
+  };
+}
+
 // Helper: flatten 2D hands back for Firestore
 function flattenPlayersHandsForFirestore(players: Player[]): any[] {
   return players.map(player => ({
     ...player,
     cards: player.cards.flat().map((card, index) => ({
-      card: card,
+      card: toFirestoreCard(card),
       row: Math.floor(index / 3),
       col: index % 3
     }))

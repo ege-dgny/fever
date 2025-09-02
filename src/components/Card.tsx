@@ -56,7 +56,7 @@ const CardComponent: React.FC<CardProps> = ({
   
   const getRankLabel = (card: CardType): string => {
     if (card.rank === 'joker') return 'Joker';
-    if (typeof card.rank === 'string' && card.rank.length > 0) return card.rank;
+    if (typeof card.rank === 'string' && card.rank.length > 0) return card.rank; // prefer rank
     const v = Number((card as any).value);
     if (Number.isFinite(v)) {
       if (v === -1) return 'Joker';
